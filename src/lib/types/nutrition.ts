@@ -79,6 +79,52 @@ export interface DailyGoals {
   micros: Micronutrients;
 }
 
+export type Sex = 'male' | 'female';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type Goal = 'aggressive_cut' | 'conservative_cut' | 'maintain' | 'conservative_bulk' | 'aggressive_bulk';
+
+export interface UserProfile {
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  sex: Sex;
+  activityLevel: ActivityLevel;
+  goal: Goal;
+  isSetup: boolean;
+}
+
+export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+export const GOAL_ADJUSTMENTS: Record<Goal, number> = {
+  aggressive_cut: -0.25,
+  conservative_cut: -0.10,
+  maintain: 0,
+  conservative_bulk: 0.10,
+  aggressive_bulk: 0.25,
+};
+
+export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
+  sedentary: 'Sedentary (little exercise)',
+  light: 'Light (1-3 days/week)',
+  moderate: 'Moderate (3-5 days/week)',
+  active: 'Active (6-7 days/week)',
+  very_active: 'Very Active (intense daily)',
+};
+
+export const GOAL_LABELS: Record<Goal, { title: string; description: string }> = {
+  aggressive_cut: { title: 'Aggressive Cut', description: '-25% for rapid loss' },
+  conservative_cut: { title: 'Steady Cut', description: '-10% for consistent loss' },
+  maintain: { title: 'Maintain', description: 'Keep current weight' },
+  conservative_bulk: { title: 'Lean Bulk', description: '+10% for lean gains' },
+  aggressive_bulk: { title: 'Aggressive Bulk', description: '+25% for rapid gains' },
+};
+
 export interface DailyLog {
   date: string;
   entries: FoodLogEntry[];

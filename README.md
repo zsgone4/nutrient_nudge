@@ -1,6 +1,6 @@
 # NutriTrack - Smart Nutrition Tracking App
 
-A comprehensive calorie and micronutrient tracking app that goes beyond basic food logging with intelligent recommendations and detailed vitamin/mineral tracking.
+A comprehensive calorie and micronutrient tracking app that goes beyond basic food logging with intelligent recommendations, detailed vitamin/mineral tracking, and personalized calorie goals.
 
 ## Features
 
@@ -31,6 +31,19 @@ Each nutrient shows:
 - Status indicators (low/good/high)
 - Expandable info with health benefits
 
+### Profile & Calorie Calculator
+Personalized calorie targets based on:
+- **Personal Stats**: Age, height, weight, sex
+- **Activity Level**: Sedentary to Very Active (5 levels)
+- **Goal Selection**:
+  - Aggressive Cut (-25% calories)
+  - Steady Cut (-10% calories)
+  - Maintain (maintenance calories)
+  - Lean Bulk (+10% calories)
+  - Aggressive Bulk (+25% calories)
+
+Uses the Mifflin-St Jeor equation for accurate BMR calculation, then applies activity multipliers and goal adjustments.
+
 ### Food Database
 Pre-loaded with 35+ common foods including:
 - Fruits & Vegetables
@@ -46,7 +59,7 @@ Each food includes complete macro and micronutrient data.
 
 - Expo SDK 53 + React Native
 - Expo Router for navigation
-- Zustand for state management
+- Zustand for state management (persisted with AsyncStorage)
 - NativeWind (Tailwind CSS)
 - React Native Reanimated for animations
 - Lucide React Native for icons
@@ -58,7 +71,8 @@ src/
 ├── app/
 │   ├── (tabs)/
 │   │   ├── index.tsx      # Dashboard
-│   │   └── two.tsx        # Micronutrients
+│   │   ├── two.tsx        # Micronutrients
+│   │   └── profile.tsx    # Profile & Goals
 │   ├── add-food.tsx       # Add food modal
 │   └── _layout.tsx        # Root layout
 ├── components/
@@ -66,6 +80,6 @@ src/
 └── lib/
     ├── data/foods.ts      # Food database
     ├── types/nutrition.ts # Type definitions
-    ├── state/nutrition-store.ts # Zustand store
+    ├── state/nutrition-store.ts # Zustand store with calorie calculations
     └── utils/recommendations.ts # Smart recommendations
 ```

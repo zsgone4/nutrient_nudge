@@ -1,16 +1,16 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Coffee, Sun, Moon, Cookie, Plus, Sparkles, ChevronRight } from 'lucide-react-native';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComponents';
 import { getSmartRecommendations } from '@/lib/utils/recommendations';
-import { MealType } from '@/lib/types/nutrition';
+import { MealType, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
 
 const MEAL_CONFIG: Record<MealType, { label: string; icon: React.ReactNode; color: string }> = {
   breakfast: { label: 'Breakfast', icon: <Coffee size={24} color="#F59E0B" />, color: '#F59E0B' },
@@ -19,34 +19,90 @@ const MEAL_CONFIG: Record<MealType, { label: string; icon: React.ReactNode; colo
   snacks: { label: 'Snacks', icon: <Cookie size={24} color="#EC4899" />, color: '#EC4899' },
 };
 
+// Empty nutrition objects for calculations
+const emptyMacros: Macronutrients = {
+  calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0,
+};
+
+const emptyMicros: Micronutrients = {
+  vitaminA: 0, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0,
+  vitaminB6: 0, vitaminB7: 0, vitaminB9: 0, vitaminB12: 0, vitaminC: 0,
+  vitaminD: 0, vitaminE: 0, vitaminK: 0, calcium: 0, iron: 0, magnesium: 0,
+  phosphorus: 0, potassium: 0, sodium: 0, zinc: 0, copper: 0, manganese: 0,
+  selenium: 0, chromium: 0, iodine: 0,
+};
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // Subscribe to actual state values that will trigger re-renders
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
-  const getTotalsForDate = useNutritionStore(s => s.getTotalsForDate);
-  const getRemainingForDate = useNutritionStore(s => s.getRemainingForDate);
-  const getEntriesForMeal = useNutritionStore(s => s.getEntriesForMeal);
+  const logs = useNutritionStore(s => s.logs);
 
-  const totals = useMemo(() => getTotalsForDate(selectedDate), [selectedDate, getTotalsForDate]);
-  const remaining = useMemo(() => getRemainingForDate(selectedDate), [selectedDate, getRemainingForDate]);
+  // Get entries for the selected date
+  const entries = logs[selectedDate] || [];
 
-  const calorieProgress = totals.macros.calories / dailyGoals.macros.calories;
+  // Calculate totals directly from entries
+  const totals = React.useMemo(() => {
+    const result = {
+      macros: { ...emptyMacros },
+      micros: { ...emptyMicros },
+    };
+
+    entries.forEach(entry => {
+      const multiplier = entry.servings;
+      const { macros, micros } = entry.food;
+
+      (Object.keys(result.macros) as (keyof Macronutrients)[]).forEach(key => {
+        result.macros[key] += macros[key] * multiplier;
+      });
+
+      (Object.keys(result.micros) as (keyof Micronutrients)[]).forEach(key => {
+        result.micros[key] += micros[key] * multiplier;
+      });
+    });
+
+    return result;
+  }, [entries]);
+
+  // Calculate remaining
+  const remaining = React.useMemo(() => {
+    const result = {
+      macros: { ...emptyMacros },
+      micros: { ...emptyMicros },
+    };
+
+    (Object.keys(result.macros) as (keyof Macronutrients)[]).forEach(key => {
+      result.macros[key] = Math.max(0, dailyGoals.macros[key] - totals.macros[key]);
+    });
+
+    (Object.keys(result.micros) as (keyof Micronutrients)[]).forEach(key => {
+      result.micros[key] = Math.max(0, dailyGoals.micros[key] - totals.micros[key]);
+    });
+
+    return result;
+  }, [totals, dailyGoals]);
+
+  const calorieProgress = dailyGoals.macros.calories > 0
+    ? totals.macros.calories / dailyGoals.macros.calories
+    : 0;
   const remainingCalories = Math.max(0, Math.round(dailyGoals.macros.calories - totals.macros.calories));
 
-  const recommendations = useMemo(
+  const recommendations = React.useMemo(
     () => getSmartRecommendations(remaining.macros.calories, remaining.macros, remaining.micros, 3),
     [remaining]
   );
 
   const getMealCalories = (mealType: MealType) => {
-    const entries = getEntriesForMeal(selectedDate, mealType);
-    return entries.reduce((sum, e) => sum + e.food.macros.calories * e.servings, 0);
+    return entries
+      .filter(e => e.mealType === mealType)
+      .reduce((sum, e) => sum + e.food.macros.calories * e.servings, 0);
   };
 
   const getMealItemCount = (mealType: MealType) => {
-    return getEntriesForMeal(selectedDate, mealType).length;
+    return entries.filter(e => e.mealType === mealType).length;
   };
 
   const handleAddFood = (mealType: MealType) => {
@@ -97,7 +153,7 @@ export default function DashboardScreen() {
               <View className="h-2 bg-white/25 rounded-full">
                 <View
                   className="h-2 bg-white rounded-full"
-                  style={{ width: `${Math.min((totals.macros.carbohydrates / dailyGoals.macros.carbohydrates) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totals.macros.carbohydrates / (dailyGoals.macros.carbohydrates || 1)) * 100, 100)}%` }}
                 />
               </View>
             </View>
@@ -109,7 +165,7 @@ export default function DashboardScreen() {
               <View className="h-2 bg-white/25 rounded-full">
                 <View
                   className="h-2 bg-white rounded-full"
-                  style={{ width: `${Math.min((totals.macros.protein / dailyGoals.macros.protein) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totals.macros.protein / (dailyGoals.macros.protein || 1)) * 100, 100)}%` }}
                 />
               </View>
             </View>
@@ -121,7 +177,7 @@ export default function DashboardScreen() {
               <View className="h-2 bg-white/25 rounded-full">
                 <View
                   className="h-2 bg-white rounded-full"
-                  style={{ width: `${Math.min((totals.macros.fat / dailyGoals.macros.fat) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((totals.macros.fat / (dailyGoals.macros.fat || 1)) * 100, 100)}%` }}
                 />
               </View>
             </View>
@@ -153,7 +209,7 @@ export default function DashboardScreen() {
             <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
               Based on your remaining macros and micronutrients
             </Text>
-            {recommendations.map((rec, index) => (
+            {recommendations.map((rec) => (
               <Pressable
                 key={rec.food.id}
                 onPress={() => {

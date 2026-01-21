@@ -8,6 +8,9 @@ import {
   Macronutrients,
   Micronutrients,
   DAILY_VALUES,
+  UserProfile,
+  ACTIVITY_MULTIPLIERS,
+  GOAL_ADJUSTMENTS,
 } from '../types/nutrition';
 
 // Helper to get today's date string
@@ -29,6 +32,73 @@ const emptyMicros: Micronutrients = {
   selenium: 0, chromium: 0, iodine: 0,
 };
 
+// Default user profile
+const defaultProfile: UserProfile = {
+  age: 30,
+  heightCm: 170,
+  weightKg: 70,
+  sex: 'male',
+  activityLevel: 'moderate',
+  goal: 'maintain',
+  isSetup: false,
+};
+
+// Calculate BMR using Mifflin-St Jeor equation
+function calculateBMR(profile: UserProfile): number {
+  const { weightKg, heightCm, age, sex } = profile;
+
+  if (sex === 'male') {
+    return 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+  } else {
+    return 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+  }
+}
+
+// Calculate TDEE (Total Daily Energy Expenditure)
+function calculateTDEE(profile: UserProfile): number {
+  const bmr = calculateBMR(profile);
+  const activityMultiplier = ACTIVITY_MULTIPLIERS[profile.activityLevel];
+  return Math.round(bmr * activityMultiplier);
+}
+
+// Calculate target calories based on goal
+function calculateTargetCalories(profile: UserProfile): number {
+  const tdee = calculateTDEE(profile);
+  const adjustment = GOAL_ADJUSTMENTS[profile.goal];
+  return Math.round(tdee * (1 + adjustment));
+}
+
+// Calculate macro targets based on calories
+function calculateMacros(calories: number, profile: UserProfile): Macronutrients {
+  // Protein: 1.6-2.2g per kg body weight for active individuals
+  // Using 1.8g/kg as a good middle ground
+  const proteinGrams = Math.round(profile.weightKg * 1.8);
+  const proteinCalories = proteinGrams * 4;
+
+  // Fat: 25-30% of calories
+  const fatCalories = calories * 0.27;
+  const fatGrams = Math.round(fatCalories / 9);
+
+  // Carbs: remaining calories
+  const carbCalories = calories - proteinCalories - fatCalories;
+  const carbGrams = Math.round(carbCalories / 4);
+
+  // Fiber: 14g per 1000 calories
+  const fiber = Math.round((calories / 1000) * 14);
+
+  // Sugar: less than 10% of calories
+  const sugar = Math.round((calories * 0.08) / 4);
+
+  return {
+    calories,
+    protein: proteinGrams,
+    carbohydrates: carbGrams,
+    fat: fatGrams,
+    fiber,
+    sugar,
+  };
+}
+
 interface NutritionState {
   // Daily log entries keyed by date (YYYY-MM-DD)
   logs: Record<string, FoodLogEntry[]>;
@@ -39,6 +109,9 @@ interface NutritionState {
     micros: Micronutrients;
   };
 
+  // User profile
+  userProfile: UserProfile;
+
   // Current date being viewed
   selectedDate: string;
 
@@ -48,6 +121,8 @@ interface NutritionState {
   updateFoodEntry: (entryId: string, servings: number) => void;
   setSelectedDate: (date: string) => void;
   setDailyGoals: (goals: { macros: Macronutrients; micros: Micronutrients }) => void;
+  setUserProfile: (profile: UserProfile) => void;
+  recalculateGoals: () => void;
 
   // Computed getters
   getEntriesForDate: (date: string) => FoodLogEntry[];
@@ -61,6 +136,7 @@ export const useNutritionStore = create<NutritionState>()(
     (set, get) => ({
       logs: {},
       dailyGoals: DAILY_VALUES,
+      userProfile: defaultProfile,
       selectedDate: getTodayString(),
 
       addFoodEntry: (food, servings, mealType) => {
@@ -108,6 +184,25 @@ export const useNutritionStore = create<NutritionState>()(
 
       setDailyGoals: (goals) => set({ dailyGoals: goals }),
 
+      setUserProfile: (profile) => {
+        set({ userProfile: profile });
+        // Recalculate goals when profile changes
+        get().recalculateGoals();
+      },
+
+      recalculateGoals: () => {
+        const profile = get().userProfile;
+        const targetCalories = calculateTargetCalories(profile);
+        const macros = calculateMacros(targetCalories, profile);
+
+        set(state => ({
+          dailyGoals: {
+            macros,
+            micros: state.dailyGoals.micros, // Keep micro goals as default RDV
+          },
+        }));
+      },
+
       getEntriesForDate: (date) => get().logs[date] || [],
 
       getEntriesForMeal: (date, mealType) =>
@@ -125,12 +220,10 @@ export const useNutritionStore = create<NutritionState>()(
           const multiplier = entry.servings;
           const { macros, micros } = entry.food;
 
-          // Sum macros
           (Object.keys(totals.macros) as (keyof Macronutrients)[]).forEach(key => {
             totals.macros[key] += macros[key] * multiplier;
           });
 
-          // Sum micros
           (Object.keys(totals.micros) as (keyof Micronutrients)[]).forEach(key => {
             totals.micros[key] += micros[key] * multiplier;
           });
@@ -165,7 +258,11 @@ export const useNutritionStore = create<NutritionState>()(
       partialize: (state) => ({
         logs: state.logs,
         dailyGoals: state.dailyGoals,
+        userProfile: state.userProfile,
       }),
     }
   )
 );
+
+// Export calculation functions for use in UI
+export { calculateBMR, calculateTDEE, calculateTargetCalories, calculateMacros };
