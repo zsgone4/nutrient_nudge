@@ -150,12 +150,16 @@ export const useNutritionStore = create<NutritionState>()(
           date,
         };
 
-        set(state => ({
-          logs: {
+        console.log('[NutritionStore] Adding food entry:', { food: food.name, servings, mealType, date });
+
+        set(state => {
+          const newLogs = {
             ...state.logs,
             [date]: [...(state.logs[date] || []), entry],
-          },
-        }));
+          };
+          console.log('[NutritionStore] New logs for date:', date, newLogs[date]?.length, 'entries');
+          return { logs: newLogs };
+        });
       },
 
       removeFoodEntry: (entryId) => {
