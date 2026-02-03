@@ -1,4 +1,4 @@
-import { Food, Macronutrients, Micronutrients } from '../types/nutrition';
+import { Food, Macronutrients, Micronutrients, DAILY_VALUES } from '../types/nutrition';
 import { FOOD_DATABASE } from '../data/foods';
 
 interface Recommendation {
@@ -7,7 +7,7 @@ interface Recommendation {
   reasons: string[];
 }
 
-// Recommend foods based on remaining calories and macro balance
+// Recommend foods based on remaining calories and PRIORITIZING micronutrient deficiencies
 export function getSmartRecommendations(
   remainingCalories: number,
   remainingMacros: Macronutrients,
@@ -18,9 +18,9 @@ export function getSmartRecommendations(
 
   const recommendations: Recommendation[] = [];
 
-  // Determine the dominant remaining macro need (as percentage of goal)
-  const macroPriority = getMacroPriority(remainingMacros);
+  // Get micronutrient deficiencies sorted by severity
   const microDeficiencies = getMicroDeficiencies(remainingMicros);
+  const macroPriority = getMacroPriority(remainingMacros);
 
   FOOD_DATABASE.forEach(food => {
     const { macros, micros } = food;
@@ -31,48 +31,83 @@ export function getSmartRecommendations(
     let score = 0;
     const reasons: string[] = [];
 
-    // Score based on calorie fit (prefer foods that fit well within budget)
-    const calorieFitScore = 1 - Math.abs(macros.calories - remainingCalories * 0.3) / (remainingCalories || 1);
-    score += Math.max(0, calorieFitScore) * 20;
+    // PRIORITY 1: Score based on micronutrient deficiencies (highest weight)
+    let microScore = 0;
+    const microContributions: string[] = [];
 
-    // Score based on macro alignment
-    if (macroPriority === 'carbohydrates' && macros.carbohydrates > macros.protein && macros.carbohydrates > macros.fat) {
-      score += 25;
-      reasons.push('Good source of carbs');
-    } else if (macroPriority === 'protein' && macros.protein > 5) {
-      score += 25 + (macros.protein / macros.calories) * 50; // Bonus for protein density
-      reasons.push('High in protein');
-    } else if (macroPriority === 'fat' && macros.fat > macros.carbohydrates / 3) {
-      score += 20;
-      reasons.push('Contains healthy fats');
-    }
-
-    // Score based on micronutrient deficiencies being addressed
-    microDeficiencies.forEach(({ key, name, percentMissing }) => {
+    microDeficiencies.forEach(({ key, name, percentMissing, dailyValue }) => {
       const microValue = micros[key as keyof Micronutrients];
-      if (microValue > 0) {
-        const contribution = microValue / remainingMicros[key as keyof Micronutrients];
-        if (contribution > 0.1) {
-          score += contribution * 15;
-          if (contribution > 0.2) {
-            reasons.push(`Rich in ${name}`);
+      if (microValue > 0 && dailyValue > 0) {
+        // Calculate what percentage of daily value this food provides
+        const percentOfDV = (microValue / dailyValue) * 100;
+
+        // Higher score for nutrients you're missing the most
+        if (percentOfDV >= 10) {
+          const deficiencyWeight = Math.min(percentMissing / 100, 1); // How much you're missing
+          microScore += percentOfDV * deficiencyWeight * 2;
+
+          if (percentOfDV >= 20) {
+            microContributions.push(`${Math.round(percentOfDV)}% ${name}`);
           }
         }
       }
     });
 
-    // Fiber bonus
+    // Add top micronutrient contributions to reasons
+    if (microContributions.length > 0) {
+      const topMicros = microContributions.slice(0, 2);
+      reasons.push(`Rich in ${topMicros.join(', ')}`);
+    }
+
+    score += microScore;
+
+    // PRIORITY 2: Score based on calorie fit (moderate weight)
+    const calorieFitScore = 1 - Math.abs(macros.calories - remainingCalories * 0.25) / (remainingCalories || 1);
+    score += Math.max(0, calorieFitScore) * 15;
+
+    // PRIORITY 3: Score based on macro alignment (lower weight)
+    if (macroPriority === 'protein' && macros.protein > 5) {
+      const proteinDensity = (macros.protein / macros.calories) * 100;
+      score += 10 + proteinDensity * 2;
+      if (proteinDensity > 0.15) {
+        reasons.push('High protein');
+      }
+    } else if (macroPriority === 'carbohydrates' && macros.carbohydrates > macros.protein) {
+      score += 8;
+    } else if (macroPriority === 'fat' && macros.fat > 3) {
+      score += 8;
+      if (!reasons.includes('Contains healthy fats')) {
+        reasons.push('Contains healthy fats');
+      }
+    }
+
+    // Fiber bonus - important for gut health
     if (macros.fiber > 3 && remainingMacros.fiber > 5) {
-      score += 10;
-      reasons.push('Good fiber source');
+      score += 12;
+      if (macros.fiber >= 5) {
+        reasons.push('Good fiber');
+      }
     }
 
     // Penalize high sugar if remaining sugar budget is low
     if (macros.sugar > 10 && remainingMacros.sugar < 15) {
-      score -= 15;
+      score -= 20;
     }
 
-    if (score > 10 && reasons.length > 0) {
+    // Penalize high sodium
+    if (micros.sodium > 400) {
+      score -= 10;
+    }
+
+    // Bonus for nutrient density (micronutrients per calorie)
+    const nutrientDensity = calculateNutrientDensity(food);
+    score += nutrientDensity * 20;
+
+    if (nutrientDensity > 0.5 && !reasons.find(r => r.includes('Rich'))) {
+      reasons.push('Nutrient dense');
+    }
+
+    if (score > 15 && reasons.length > 0) {
       recommendations.push({ food, score, reasons: [...new Set(reasons)].slice(0, 3) });
     }
   });
@@ -83,15 +118,38 @@ export function getSmartRecommendations(
     .slice(0, count);
 }
 
+// Calculate nutrient density score (how nutrient-rich relative to calories)
+function calculateNutrientDensity(food: Food): number {
+  const { macros, micros } = food;
+  if (macros.calories === 0) return 0;
+
+  let densityScore = 0;
+  const dv = DAILY_VALUES.micros;
+
+  // Score key nutrients
+  const keyNutrients: (keyof Micronutrients)[] = [
+    'vitaminA', 'vitaminC', 'vitaminD', 'vitaminK', 'vitaminB12',
+    'vitaminB9', 'calcium', 'iron', 'magnesium', 'potassium', 'zinc'
+  ];
+
+  keyNutrients.forEach(key => {
+    if (micros[key] > 0 && dv[key] > 0) {
+      const percentDV = micros[key] / dv[key];
+      densityScore += percentDV;
+    }
+  });
+
+  // Normalize by calories (per 100 cal)
+  return (densityScore / macros.calories) * 100;
+}
+
 // Determine which macro is most needed
 function getMacroPriority(remaining: Macronutrients): 'protein' | 'carbohydrates' | 'fat' {
-  // Calculate percentage of calories from each macro
   const proteinCals = remaining.protein * 4;
   const carbCals = remaining.carbohydrates * 4;
   const fatCals = remaining.fat * 9;
   const totalCals = remaining.calories || 1;
 
-  // Typical balanced ratio: 50% carbs, 25% protein, 25% fat
   const carbRatio = carbCals / totalCals;
   const proteinRatio = proteinCals / totalCals;
   const fatRatio = fatCals / totalCals;
@@ -100,24 +158,29 @@ function getMacroPriority(remaining: Macronutrients): 'protein' | 'carbohydrates
   if (proteinRatio > 0.25) return 'protein';
   if (fatRatio > 0.25) return 'fat';
 
-  // Default to carbs as they're typically the largest macro need
   return 'carbohydrates';
 }
 
-// Get top micronutrient deficiencies
-function getMicroDeficiencies(remaining: Micronutrients): Array<{ key: string; name: string; percentMissing: number }> {
-  const deficiencies: Array<{ key: string; name: string; percentMissing: number }> = [];
+// Get top micronutrient deficiencies with daily value context
+function getMicroDeficiencies(remaining: Micronutrients): Array<{
+  key: string;
+  name: string;
+  percentMissing: number;
+  dailyValue: number;
+}> {
+  const deficiencies: Array<{ key: string; name: string; percentMissing: number; dailyValue: number }> = [];
+  const dv = DAILY_VALUES.micros;
 
   const microNames: Record<string, string> = {
     vitaminA: 'Vitamin A',
-    vitaminB1: 'B1 (Thiamin)',
-    vitaminB2: 'B2 (Riboflavin)',
-    vitaminB3: 'B3 (Niacin)',
+    vitaminB1: 'B1',
+    vitaminB2: 'B2',
+    vitaminB3: 'B3',
     vitaminB5: 'B5',
-    vitaminB6: 'Vitamin B6',
-    vitaminB7: 'B7 (Biotin)',
+    vitaminB6: 'B6',
+    vitaminB7: 'Biotin',
     vitaminB9: 'Folate',
-    vitaminB12: 'Vitamin B12',
+    vitaminB12: 'B12',
     vitaminC: 'Vitamin C',
     vitaminD: 'Vitamin D',
     vitaminE: 'Vitamin E',
@@ -129,21 +192,28 @@ function getMicroDeficiencies(remaining: Micronutrients): Array<{ key: string; n
     potassium: 'Potassium',
     zinc: 'Zinc',
     selenium: 'Selenium',
+    iodine: 'Iodine',
   };
 
   (Object.keys(remaining) as (keyof Micronutrients)[]).forEach(key => {
     const value = remaining[key];
-    if (value > 0 && microNames[key]) {
+    const dailyValue = dv[key];
+    if (value > 0 && microNames[key] && dailyValue > 0) {
+      // Calculate what percentage of daily value is still needed
+      const percentMissing = (value / dailyValue) * 100;
       deficiencies.push({
         key,
         name: microNames[key],
-        percentMissing: value,
+        percentMissing,
+        dailyValue,
       });
     }
   });
 
-  // Return top deficiencies
-  return deficiencies.slice(0, 10);
+  // Sort by percentage missing (highest first = most deficient)
+  return deficiencies
+    .sort((a, b) => b.percentMissing - a.percentMissing)
+    .slice(0, 10);
 }
 
 // Get quick snack suggestions based on calorie budget
@@ -154,8 +224,10 @@ export function getQuickSnacks(remainingCalories: number): Food[] {
     .filter(food => food.macros.calories <= remainingCalories && food.macros.calories <= 200)
     .sort((a, b) => {
       // Prefer nutrient-dense, lower sugar options
-      const scoreA = (a.macros.fiber + a.macros.protein) / a.macros.calories - a.macros.sugar / 20;
-      const scoreB = (b.macros.fiber + b.macros.protein) / b.macros.calories - b.macros.sugar / 20;
+      const densityA = calculateNutrientDensity(a);
+      const densityB = calculateNutrientDensity(b);
+      const scoreA = densityA + (a.macros.fiber + a.macros.protein) / a.macros.calories - a.macros.sugar / 30;
+      const scoreB = densityB + (b.macros.fiber + b.macros.protein) / b.macros.calories - b.macros.sugar / 30;
       return scoreB - scoreA;
     })
     .slice(0, 6);

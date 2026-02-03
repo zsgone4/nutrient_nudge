@@ -107,7 +107,8 @@ export default function DashboardScreen() {
 
   const handleAddFood = (mealType: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: '/add-food', params: { mealType } });
+    // Navigate to meal detail screen to view/edit foods for this meal
+    router.push({ pathname: '/meal-detail', params: { mealType } });
   };
 
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
@@ -207,7 +208,7 @@ export default function DashboardScreen() {
               </Text>
             </View>
             <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Based on your remaining macros and micronutrients
+              Foods to boost your micronutrient score
             </Text>
             {recommendations.map((rec) => (
               <Pressable

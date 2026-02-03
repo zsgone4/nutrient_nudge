@@ -132,7 +132,7 @@ export default function AddFoodScreen() {
               <View className="flex-1">
                 <Text className="text-xl font-bold text-gray-900 dark:text-white">{selectedFood.name}</Text>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedFood.servingUnit} ({selectedFood.servingSize}g)
+                  {selectedFood.servingSize}g per serving
                 </Text>
               </View>
             </View>
@@ -140,7 +140,7 @@ export default function AddFoodScreen() {
 
           {/* Servings Selector */}
           <View className="px-4 py-4 bg-white dark:bg-gray-900 mt-2">
-            <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Servings</Text>
+            <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Amount</Text>
             <View className="flex-row items-center justify-center">
               <Pressable
                 onPress={() => adjustServings(-0.25)}
@@ -150,10 +150,10 @@ export default function AddFoodScreen() {
               </Pressable>
               <View className="mx-6 items-center">
                 <Text className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {servings}
+                  {Math.round(selectedFood.servingSize * servings)}
                 </Text>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedFood.servingUnit}
+                  grams
                 </Text>
               </View>
               <Pressable
@@ -333,7 +333,7 @@ export default function AddFoodScreen() {
               <View className="flex-1">
                 <Text className="text-base font-medium text-gray-900 dark:text-white">{food.name}</Text>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {food.servingUnit} • {food.macros.calories} kcal
+                  {food.servingSize}g • {food.macros.calories} kcal
                 </Text>
               </View>
               <View className="items-end">

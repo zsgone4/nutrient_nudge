@@ -8,14 +8,21 @@ A comprehensive calorie and micronutrient tracking app that goes beyond basic fo
 - Daily calorie and macro overview with circular progress indicators
 - Real-time tracking of protein, carbs, and fat
 - Meal-by-meal breakdown (Breakfast, Lunch, Dinner, Snacks)
-- Smart food recommendations based on remaining nutrition needs
+- Smart food recommendations based on micronutrient deficiencies
+
+### Meal Management
+- **View meal details**: Tap any meal to see all logged foods
+- **Edit portions**: Adjust amounts in grams for any logged food
+- **Remove foods**: Delete items you logged by mistake
+- All measurements displayed in grams for consistency
 
 ### Smart Recommendations
-The app analyzes your remaining daily allowances and suggests foods that:
+The app prioritizes **micronutrient optimization** and suggests foods that:
+- Address your biggest vitamin/mineral deficiencies first
+- Show percentage of daily value each food provides (e.g., "43% Vitamin C")
 - Fit within your calorie budget
-- Help balance your macro ratios
-- Address micronutrient deficiencies
-- Each recommendation includes reasons (e.g., "High in protein", "Rich in Vitamin B12")
+- Are nutrient-dense (high micronutrients per calorie)
+- Each recommendation explains why (e.g., "Rich in 43% Vitamin C, 20% Folate")
 
 ### Micronutrients Tab
 Detailed tracking of 26 micronutrients organized by category:
@@ -45,15 +52,17 @@ Personalized calorie targets based on:
 Uses the Mifflin-St Jeor equation for accurate BMR calculation, then applies activity multipliers and goal adjustments.
 
 ### Food Database
-Pre-loaded with 35+ common foods including:
+Pre-loaded with 180+ foods including:
 - Fruits & Vegetables
 - Proteins (meat, fish, eggs, tofu, legumes)
 - Dairy products
 - Grains & carbs
 - Healthy fats & nuts
-- Snacks & beverages
+- International foods (falafel, sushi, curry, etc.)
+- Snacks, desserts & beverages
+- Spreads (Marmite, Vegemite, Nutella, etc.)
 
-Each food includes complete macro and micronutrient data.
+Each food includes complete macro and micronutrient data with all measurements in grams.
 
 ## Tech Stack
 
@@ -73,13 +82,14 @@ src/
 │   │   ├── index.tsx      # Dashboard
 │   │   ├── two.tsx        # Micronutrients
 │   │   └── profile.tsx    # Profile & Goals
-│   ├── add-food.tsx       # Add food modal
+│   ├── add-food.tsx       # Add food screen
+│   ├── meal-detail.tsx    # View/edit meal foods
 │   └── _layout.tsx        # Root layout
 ├── components/
 │   └── NutritionComponents.tsx
 └── lib/
-    ├── data/foods.ts      # Food database
+    ├── data/foods.ts      # Food database (180+ items)
     ├── types/nutrition.ts # Type definitions
     ├── state/nutrition-store.ts # Zustand store with calorie calculations
-    └── utils/recommendations.ts # Smart recommendations
+    └── utils/recommendations.ts # Micronutrient-focused recommendations
 ```
