@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Coffee, Sun, Moon, Cookie, Plus, Sparkles, ChevronRight } from 'lucide-react-native';
+import { Coffee, Sun, Moon, Cookie, Sparkles, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -105,10 +105,14 @@ export default function DashboardScreen() {
     return entries.filter(e => e.mealType === mealType).length;
   };
 
+  const handleViewMeal = (mealType: MealType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({ pathname: '/meal-detail', params: { mealType } });
+  };
+
   const handleAddFood = (mealType: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Navigate to meal detail screen to view/edit foods for this meal
-    router.push({ pathname: '/meal-detail', params: { mealType } });
+    router.push({ pathname: '/add-food', params: { mealType } });
   };
 
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
@@ -232,7 +236,10 @@ export default function DashboardScreen() {
 
         {/* Meals */}
         <Animated.View entering={FadeInDown.delay(400).springify()}>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">Meals</Text>
+          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">Meals</Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            Tap a meal to view or edit, or press + to add food
+          </Text>
           {(Object.keys(MEAL_CONFIG) as MealType[]).map((mealType) => {
             const config = MEAL_CONFIG[mealType];
             const calories = Math.round(getMealCalories(mealType));
@@ -246,7 +253,8 @@ export default function DashboardScreen() {
                 itemCount={itemCount}
                 icon={config.icon}
                 color={config.color}
-                onPress={() => handleAddFood(mealType)}
+                onPress={() => handleViewMeal(mealType)}
+                onAddPress={() => handleAddFood(mealType)}
               />
             );
           })}
@@ -274,18 +282,6 @@ export default function DashboardScreen() {
           </View>
         </Animated.View>
       </ScrollView>
-
-      {/* Floating Add Button */}
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          router.push('/add-food');
-        }}
-        className="absolute bottom-6 right-6 w-14 h-14 bg-emerald-500 rounded-full items-center justify-center shadow-lg"
-        style={{ marginBottom: insets.bottom }}
-      >
-        <Plus size={28} color="#ffffff" />
-      </Pressable>
     </View>
   );
 }

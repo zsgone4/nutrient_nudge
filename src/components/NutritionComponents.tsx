@@ -119,10 +119,11 @@ interface MealCardProps {
   itemCount: number;
   icon: React.ReactNode;
   onPress: () => void;
+  onAddPress: () => void;
   color: string;
 }
 
-export function MealCard({ title, calories, itemCount, icon, onPress, color }: MealCardProps) {
+export function MealCard({ title, calories, itemCount, icon, onPress, onAddPress, color }: MealCardProps) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -155,12 +156,24 @@ export function MealCard({ title, calories, itemCount, icon, onPress, color }: M
         <View className="flex-1">
           <Text className="text-base font-semibold text-gray-900 dark:text-white">{title}</Text>
           <Text className="text-sm text-gray-500 dark:text-gray-400">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            {itemCount === 0 ? 'Tap to add food' : `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
           </Text>
         </View>
-        <View className="items-end">
-          <Text className="text-lg font-bold" style={{ color }}>{calories}</Text>
-          <Text className="text-xs text-gray-400">kcal</Text>
+        <View className="flex-row items-center">
+          <View className="items-end mr-3">
+            <Text className="text-lg font-bold" style={{ color }}>{calories}</Text>
+            <Text className="text-xs text-gray-400">kcal</Text>
+          </View>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onAddPress();
+            }}
+            className="w-9 h-9 rounded-full items-center justify-center"
+            style={{ backgroundColor: `${color}20` }}
+          >
+            <Text style={{ color, fontSize: 20, fontWeight: '600', marginTop: -2 }}>+</Text>
+          </Pressable>
         </View>
       </View>
     </AnimatedPressable>
