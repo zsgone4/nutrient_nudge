@@ -142,9 +142,10 @@ export default function MicronutrientsScreen() {
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
+  const logs = useNutritionStore(s => s.logs);
   const getTotalsForDate = useNutritionStore(s => s.getTotalsForDate);
 
-  const totals = useMemo(() => getTotalsForDate(selectedDate), [selectedDate, getTotalsForDate]);
+  const totals = useMemo(() => getTotalsForDate(selectedDate), [selectedDate, logs, getTotalsForDate]);
 
   // Group micronutrients by category
   const groupedMicros = useMemo(() => {
