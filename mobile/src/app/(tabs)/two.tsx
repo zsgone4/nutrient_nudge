@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -138,6 +140,7 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
 
 export default function MicronutrientsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['B Vitamins']));
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
@@ -316,9 +319,27 @@ export default function MicronutrientsScreen() {
                 They're essential for energy production, immune function, blood clotting,
                 and other vital processes. Tap any nutrient to learn more.
               </Text>
+              <Text className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                Daily values are based on FDA and NIH Dietary Reference Intakes for adults.
+              </Text>
             </View>
           </View>
         </View>
+
+        {/* Sources & Citations */}
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/sources'); }}
+          className="mx-4 mt-3 flex-row items-center bg-white dark:bg-gray-900 rounded-xl p-4"
+        >
+          <BookOpen size={18} color="#10B981" />
+          <View className="flex-1 ml-3">
+            <Text className="text-sm font-medium text-gray-900 dark:text-white">Sources & Citations</Text>
+            <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Scientific references for daily values & health data
+            </Text>
+          </View>
+          <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
+        </Pressable>
       </ScrollView>
     </View>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -19,6 +20,7 @@ type SetupStep = 'basics' | 'activity' | 'goal' | 'summary';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const userProfile = useNutritionStore(s => s.userProfile);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
@@ -403,6 +405,21 @@ export default function ProfileScreen() {
               {Math.abs(userProfile.goal.includes('aggressive') ? 25 : userProfile.goal.includes('conservative') ? 10 : 0)}%.
             </Text>
           </View>
+
+          {/* Sources & Citations */}
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/sources'); }}
+            className="flex-row items-center bg-white dark:bg-gray-900 rounded-xl p-4 mt-3"
+          >
+            <BookOpen size={18} color="#10B981" />
+            <View className="flex-1 ml-3">
+              <Text className="text-sm font-medium text-gray-900 dark:text-white">Sources & Citations</Text>
+              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Scientific references for all health calculations
+              </Text>
+            </View>
+            <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
+          </Pressable>
         </Animated.View>
       </ScrollView>
     </View>
