@@ -147,10 +147,30 @@ export default function MicronutrientsScreen() {
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
-  const logs = useNutritionStore(s => s.logs);
-  const getTotalsForDate = useNutritionStore(s => s.getTotalsForDate);
+  // Subscribe directly to the current date's entries (not the whole logs object)
+  // so the component re-renders whenever entries for today change.
+  const entries = useNutritionStore(s => s.logs[s.selectedDate] || []);
 
-  const totals = useMemo(() => getTotalsForDate(selectedDate), [selectedDate, logs, getTotalsForDate]);
+  const totals = useMemo(() => {
+    const macros = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0 };
+    const micros: Micronutrients = {
+      vitaminA: 0, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0,
+      vitaminB6: 0, vitaminB7: 0, vitaminB9: 0, vitaminB12: 0, vitaminC: 0,
+      vitaminD: 0, vitaminE: 0, vitaminK: 0, calcium: 0, iron: 0, magnesium: 0,
+      phosphorus: 0, potassium: 0, sodium: 0, zinc: 0, copper: 0, manganese: 0,
+      selenium: 0, chromium: 0, iodine: 0,
+    };
+    entries.forEach(entry => {
+      const m = entry.servings;
+      (Object.keys(macros) as (keyof typeof macros)[]).forEach(k => {
+        macros[k] += (entry.food.macros[k] ?? 0) * m;
+      });
+      (Object.keys(micros) as (keyof Micronutrients)[]).forEach(k => {
+        micros[k] += (entry.food.micros[k] ?? 0) * m;
+      });
+    });
+    return { macros, micros };
+  }, [entries]);
 
   // Group micronutrients by category
   const groupedMicros = useMemo(() => {

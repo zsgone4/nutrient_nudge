@@ -106,9 +106,15 @@ export default function SignupScreen() {
       return json as { success: boolean; user: { id: string; email: string; name: string } };
     },
     onSuccess: (data) => {
+      // Celebration sequence: three escalating bursts
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSignedUp(data.user.id, data.user.email);
-      router.replace('/(tabs)');
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 150);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 320);
+      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 500);
+      setTimeout(() => {
+        setSignedUp(data.user.id, data.user.email);
+        router.replace('/(tabs)');
+      }, 600);
     },
     onError: (err: Error) => {
       setErrorMsg(err.message);
