@@ -15,7 +15,7 @@ import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
 
@@ -39,10 +39,10 @@ const GENDERS = [
 const TOTAL_STEPS = 4;
 
 const STEP_HEADINGS = [
-  { title: 'Welcome to\nNutrient Nudge 🌿', sub: 'Tell us a bit about yourself so we can personalise your experience.' },
+  { title: 'Welcome to\nNutrient Nudge 🌿', sub: "Tell us about yourself so we can personalise your experience." },
   { title: 'About you', sub: 'This helps us understand your nutritional needs.' },
-  { title: 'What are your\nhealth goals?', sub: 'Select all that apply — we\'ll tailor your recommendations.' },
-  { title: "You're almost\nin! 🎉", sub: 'One last step before you start tracking.' },
+  { title: 'Your health goals', sub: "Select all that apply — we'll tailor your recommendations." },
+  { title: "Almost there! 🎉", sub: 'Review your details before getting started.' },
 ];
 
 export default function SignupScreen() {
@@ -53,11 +53,13 @@ export default function SignupScreen() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [age, setAge] = useState('');
+  const [age, setAge] = useState('25');
   const [gender, setGender] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const emailRef = useRef<TextInput>(null);
 
   const isStepValid = useMemo(() => {
     switch (step) {
@@ -122,263 +124,313 @@ export default function SignupScreen() {
   const heading = STEP_HEADINGS[step];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Top gradient strip */}
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      {/* Subtle top gradient */}
       <LinearGradient
-        colors={['#ECFDF5', '#fff']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 260 }}
+        colors={['#ECFDF5', '#F9FAFB']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}
       />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={{ flex: 1, paddingTop: insets.top }}>
-
-          {/* Progress bar */}
-          <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
-            {step > 0 && (
-              <Pressable onPress={handleBack} style={{ marginBottom: 12 }}>
-                <Text style={{ color: '#10B981', fontWeight: '600', fontSize: 14 }}>← Back</Text>
-              </Pressable>
-            )}
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-                <View
-                  key={i}
-                  style={{
-                    height: 4,
-                    flex: 1,
-                    borderRadius: 2,
-                    backgroundColor: i <= step ? '#10B981' : '#E5E7EB',
-                  }}
-                />
-              ))}
-            </View>
-            <Text style={{ color: '#9CA3AF', fontSize: 11, marginTop: 6, fontWeight: '500' }}>
-              Step {step + 1} of {TOTAL_STEPS}
-            </Text>
-          </View>
-
-          {/* Scrollable content */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16, flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Step heading — animates on step change */}
-            <Animated.View key={`heading-${step}`} entering={FadeInDown.springify().damping(22)}>
-              <Text style={{ fontSize: 32, fontWeight: '800', color: '#111827', lineHeight: 38, marginTop: 8, marginBottom: 8 }}>
-                {heading?.title}
-              </Text>
-              <Text style={{ fontSize: 15, color: '#6B7280', lineHeight: 22, marginBottom: 28 }}>
-                {heading?.sub}
-              </Text>
-            </Animated.View>
-
-            {/* Step body */}
-            <Animated.View key={`body-${step}`} entering={FadeInDown.delay(80).springify().damping(22)} style={{ flex: 1 }}>
-
-              {/* ── Step 0: Name & Email ── */}
-              {step === 0 && (
-                <View style={{ gap: 14 }}>
-                  <View>
-                    <Text style={labelStyle}>Full name</Text>
-                    <TextInput
-                      style={inputStyle}
-                      placeholder="e.g. Alex Johnson"
-                      placeholderTextColor="#9CA3AF"
-                      value={name}
-                      onChangeText={setName}
-                      autoCapitalize="words"
-                      returnKeyType="next"
-                    />
-                  </View>
-                  <View>
-                    <Text style={labelStyle}>Email address</Text>
-                    <TextInput
-                      style={inputStyle}
-                      placeholder="you@example.com"
-                      placeholderTextColor="#9CA3AF"
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      returnKeyType="done"
-                    />
-                  </View>
-                </View>
-              )}
-
-              {/* ── Step 1: Age & Gender ── */}
-              {step === 1 && (
-                <View style={{ gap: 24 }}>
-                  <View>
-                    <Text style={labelStyle}>Your age</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <Pressable
-                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAge(a => String(Math.max(1, Number(a) - 1))); }}
-                        style={stepperBtn}
-                      >
-                        <Text style={stepperText}>−</Text>
-                      </Pressable>
-                      <TextInput
-                        style={[inputStyle, { flex: 1, textAlign: 'center', fontSize: 24, fontWeight: '700' }]}
-                        placeholder="25"
-                        placeholderTextColor="#9CA3AF"
-                        value={age}
-                        onChangeText={v => setAge(v.replace(/[^0-9]/g, ''))}
-                        keyboardType="number-pad"
-                        maxLength={3}
-                      />
-                      <Pressable
-                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAge(a => String(Math.min(120, Number(a) + 1))); }}
-                        style={stepperBtn}
-                      >
-                        <Text style={stepperText}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                  <View>
-                    <Text style={labelStyle}>Gender</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                      {GENDERS.map(g => {
-                        const selected = gender === g.id;
-                        return (
-                          <Pressable
-                            key={g.id}
-                            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGender(g.id); }}
-                            style={{
-                              paddingHorizontal: 18,
-                              paddingVertical: 12,
-                              borderRadius: 12,
-                              borderWidth: 2,
-                              borderColor: selected ? '#10B981' : '#E5E7EB',
-                              backgroundColor: selected ? '#ECFDF5' : '#F9FAFB',
-                            }}
-                          >
-                            <Text style={{ fontWeight: '600', fontSize: 14, color: selected ? '#059669' : '#374151' }}>
-                              {g.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* ── Step 2: Goals ── */}
-              {step === 2 && (
-                <View style={{ gap: 10 }}>
-                  {GOALS.map((goal, i) => {
-                    const selected = goals.includes(goal.id);
-                    return (
-                      <Animated.View
-                        key={goal.id}
-                        entering={FadeInRight.delay(i * 60).springify().damping(20)}
-                      >
-                        <Pressable
-                          onPress={() => toggleGoal(goal.id)}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 16,
-                            borderRadius: 16,
-                            borderWidth: 2,
-                            borderColor: selected ? goal.color : '#E5E7EB',
-                            backgroundColor: selected ? goal.color + '12' : '#F9FAFB',
-                          }}
-                        >
-                          <Text style={{ fontSize: 26, marginRight: 14 }}>{goal.emoji}</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontWeight: '700', fontSize: 15, color: '#111827' }}>{goal.label}</Text>
-                            <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{goal.desc}</Text>
-                          </View>
-                          <View style={{
-                            width: 24, height: 24, borderRadius: 12,
-                            borderWidth: 2,
-                            borderColor: selected ? goal.color : '#D1D5DB',
-                            backgroundColor: selected ? goal.color : 'transparent',
-                            alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {selected && <Check size={13} color="white" />}
-                          </View>
-                        </Pressable>
-                      </Animated.View>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* ── Step 3: Policy ── */}
-              {step === 3 && (
-                <View style={{ gap: 20 }}>
-                  {/* Summary card */}
-                  <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 18, gap: 10 }}>
-                    <SummaryRow label="Name" value={name} />
-                    <SummaryRow label="Email" value={email} />
-                    <SummaryRow label="Age" value={`${age} years old`} />
-                    <SummaryRow label="Gender" value={GENDERS.find(g => g.id === gender)?.label ?? gender} />
-                    <SummaryRow
-                      label="Goals"
-                      value={goals.map(id => GOALS.find(g => g.id === id)?.label ?? id).join(', ')}
-                    />
-                  </View>
-
-                  {/* Policy checkbox */}
-                  <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAgreedToPolicy(v => !v); }}
-                    style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
-                  >
-                    <View style={{
-                      width: 24, height: 24, borderRadius: 6, marginTop: 1,
-                      borderWidth: 2,
-                      borderColor: agreedToPolicy ? '#10B981' : '#D1D5DB',
-                      backgroundColor: agreedToPolicy ? '#10B981' : 'white',
-                      alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
-                    }}>
-                      {agreedToPolicy && <Check size={14} color="white" />}
-                    </View>
-                    <Text style={{ flex: 1, fontSize: 14, color: '#4B5563', lineHeight: 21 }}>
-                      I agree to the{' '}
-                      <Text style={{ color: '#10B981', fontWeight: '600' }}>Nutrient Nudge Privacy Policy</Text>
-                      {' '}and consent to my data being used to improve the app experience.
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-            </Animated.View>
-          </ScrollView>
-
-          {/* Error message */}
-          {!!errorMsg && (
-            <View style={{ marginHorizontal: 24, marginBottom: 10, backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12 }}>
-              <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
-            </View>
+        {/* Fixed header: back + progress */}
+        <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 4 }}>
+          {step > 0 ? (
+            <Pressable
+              onPress={handleBack}
+              hitSlop={12}
+              style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: 'white',
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: 14,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.07,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              <ChevronLeft size={20} color="#374151" />
+            </Pressable>
+          ) : (
+            <View style={{ height: 54 }} />
           )}
 
-          {/* Continue / Submit button */}
-          <View style={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 8 }}>
-            <Pressable
-              onPress={handleNext}
-              disabled={!isStepValid || mutation.isPending}
-              style={({ pressed }) => ({
-                paddingVertical: 18,
-                borderRadius: 16,
-                backgroundColor: isStepValid ? '#10B981' : '#E5E7EB',
-                alignItems: 'center',
-                opacity: pressed ? 0.9 : 1,
-              })}
-            >
-              {mutation.isPending ? (
-                <ActivityIndicator color="white" />
-              ) : (
+          {/* Step dots / progress bar */}
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  height: 4,
+                  flex: 1,
+                  borderRadius: 2,
+                  backgroundColor: i <= step ? '#10B981' : '#E5E7EB',
+                }}
+              />
+            ))}
+          </View>
+          <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 6, fontWeight: '500' }}>
+            Step {step + 1} of {TOTAL_STEPS}
+          </Text>
+        </View>
+
+        {/* Scrollable content */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Heading — animates per step */}
+          <Animated.View key={`heading-${step}`} entering={FadeInDown.springify().damping(22)}>
+            <Text style={{
+              fontSize: 32, fontWeight: '800', color: '#111827',
+              lineHeight: 40, marginTop: 16, marginBottom: 6,
+            }}>
+              {heading.title}
+            </Text>
+            <Text style={{ fontSize: 15, color: '#6B7280', lineHeight: 22, marginBottom: 28 }}>
+              {heading.sub}
+            </Text>
+          </Animated.View>
+
+          {/* Step body */}
+          <Animated.View key={`body-${step}`} entering={FadeInDown.delay(80).springify().damping(22)}>
+
+            {/* ── Step 0: Name & Email ── */}
+            {step === 0 && (
+              <View style={card}>
+                <Text style={label}>Full name</Text>
+                <TextInput
+                  style={input}
+                  placeholder="e.g. Alex Johnson"
+                  placeholderTextColor="#9CA3AF"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+                <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 14 }} />
+                <Text style={label}>Email address</Text>
+                <TextInput
+                  ref={emailRef}
+                  style={input}
+                  placeholder="you@example.com"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleNext}
+                />
+              </View>
+            )}
+
+            {/* ── Step 1: Age & Gender ── */}
+            {step === 1 && (
+              <View style={{ gap: 14 }}>
+                <View style={card}>
+                  <Text style={label}>Your age</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setAge(a => String(Math.max(1, Number(a || '1') - 1)));
+                      }}
+                      style={stepperBtn}
+                    >
+                      <Text style={stepperTxt}>−</Text>
+                    </Pressable>
+                    <TextInput
+                      style={[input, { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '800', paddingVertical: 12 }]}
+                      placeholder="25"
+                      placeholderTextColor="#9CA3AF"
+                      value={age}
+                      onChangeText={v => setAge(v.replace(/[^0-9]/g, ''))}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setAge(a => String(Math.min(120, Number(a || '0') + 1)));
+                      }}
+                      style={stepperBtn}
+                    >
+                      <Text style={stepperTxt}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={card}>
+                  <Text style={label}>Gender</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 6 }}>
+                    {GENDERS.map(g => {
+                      const selected = gender === g.id;
+                      return (
+                        <Pressable
+                          key={g.id}
+                          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGender(g.id); }}
+                          style={{
+                            paddingHorizontal: 18,
+                            paddingVertical: 12,
+                            borderRadius: 12,
+                            borderWidth: 2,
+                            borderColor: selected ? '#10B981' : '#E5E7EB',
+                            backgroundColor: selected ? '#ECFDF5' : '#F9FAFB',
+                          }}
+                        >
+                          <Text style={{ fontWeight: '600', fontSize: 14, color: selected ? '#059669' : '#374151' }}>
+                            {g.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* ── Step 2: Goals ── */}
+            {step === 2 && (
+              <View style={{ gap: 10 }}>
+                {GOALS.map((goal, i) => {
+                  const selected = goals.includes(goal.id);
+                  return (
+                    <Animated.View
+                      key={goal.id}
+                      entering={FadeInRight.delay(i * 60).springify().damping(20)}
+                    >
+                      <Pressable
+                        onPress={() => toggleGoal(goal.id)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          padding: 16,
+                          borderRadius: 16,
+                          borderWidth: 2,
+                          borderColor: selected ? goal.color : '#E5E7EB',
+                          backgroundColor: selected ? goal.color + '12' : 'white',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 3,
+                          elevation: 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 26, marginRight: 14 }}>{goal.emoji}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: '700', fontSize: 15, color: '#111827' }}>{goal.label}</Text>
+                          <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{goal.desc}</Text>
+                        </View>
+                        <View style={{
+                          width: 26, height: 26, borderRadius: 13,
+                          borderWidth: 2,
+                          borderColor: selected ? goal.color : '#D1D5DB',
+                          backgroundColor: selected ? goal.color : 'transparent',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {selected && <Check size={14} color="white" />}
+                        </View>
+                      </Pressable>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* ── Step 3: Review & Policy ── */}
+            {step === 3 && (
+              <View style={{ gap: 14 }}>
+                <View style={card}>
+                  <Text style={[label, { marginBottom: 14 }]}>Your details</Text>
+                  <SummaryRow label="Name" value={name} />
+                  <Divider />
+                  <SummaryRow label="Email" value={email} />
+                  <Divider />
+                  <SummaryRow label="Age" value={`${age} years old`} />
+                  <Divider />
+                  <SummaryRow label="Gender" value={GENDERS.find(g => g.id === gender)?.label ?? gender} />
+                  <Divider />
+                  <SummaryRow
+                    label="Goals"
+                    value={goals.map(id => GOALS.find(g => g.id === id)?.label ?? id).join(', ')}
+                  />
+                </View>
+
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAgreedToPolicy(v => !v); }}
+                  style={[card, { flexDirection: 'row', alignItems: 'flex-start', gap: 14 }]}
+                >
+                  <View style={{
+                    width: 26, height: 26, borderRadius: 8, marginTop: 1,
+                    borderWidth: 2,
+                    borderColor: agreedToPolicy ? '#10B981' : '#D1D5DB',
+                    backgroundColor: agreedToPolicy ? '#10B981' : 'white',
+                    alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {agreedToPolicy && <Check size={14} color="white" />}
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 14, color: '#4B5563', lineHeight: 21 }}>
+                    I agree to the{' '}
+                    <Text style={{ color: '#10B981', fontWeight: '600' }}>Nutrient Nudge Privacy Policy</Text>
+                    {' '}and consent to my data being used to improve the app experience.
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+          </Animated.View>
+        </ScrollView>
+
+        {/* Error */}
+        {!!errorMsg && (
+          <View style={{
+            marginHorizontal: 20, marginBottom: 8,
+            backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12,
+          }}>
+            <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
+          </View>
+        )}
+
+        {/* Continue / Submit */}
+        <View style={{
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 10,
+          backgroundColor: '#F9FAFB',
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0F0',
+        }}>
+          <Pressable
+            onPress={handleNext}
+            disabled={!isStepValid || mutation.isPending}
+            style={({ pressed }) => ({
+              paddingVertical: 17,
+              borderRadius: 16,
+              backgroundColor: isStepValid ? '#10B981' : '#E5E7EB',
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: pressed ? 0.88 : 1,
+            })}
+          >
+            {mutation.isPending ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
                 <Text style={{
                   color: isStepValid ? 'white' : '#9CA3AF',
                   fontWeight: '700',
@@ -386,56 +438,79 @@ export default function SignupScreen() {
                 }}>
                   {step < TOTAL_STEPS - 1 ? 'Continue' : 'Create Account'}
                 </Text>
-              )}
-            </Pressable>
-          </View>
-
+                {step < TOTAL_STEPS - 1 && (
+                  <ChevronRight size={18} color={isStepValid ? 'white' : '#9CA3AF'} />
+                )}
+              </>
+            )}
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function Divider() {
+  return <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 10 }} />;
+}
+
+function SummaryRow({ label: lbl, value }: { label: string; value: string }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500', width: 60 }}>{label}</Text>
-      <Text style={{ fontSize: 13, color: '#111827', fontWeight: '600', flex: 1, textAlign: 'right' }} numberOfLines={2}>{value}</Text>
+      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500', width: 64 }}>{lbl}</Text>
+      <Text style={{ fontSize: 13, color: '#111827', fontWeight: '600', flex: 1, textAlign: 'right' }} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
 
-const labelStyle = {
-  fontSize: 13,
-  fontWeight: '600' as const,
-  color: '#374151',
-  marginBottom: 8,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 0.5,
+const card: object = {
+  backgroundColor: 'white',
+  borderRadius: 18,
+  padding: 18,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 2,
+  borderWidth: 1,
+  borderColor: '#F3F4F6',
 };
 
-const inputStyle = {
+const label = {
+  fontSize: 12,
+  fontWeight: '700' as const,
+  color: '#6B7280',
+  textTransform: 'uppercase' as const,
+  letterSpacing: 0.6,
+  marginBottom: 10,
+};
+
+const input = {
   backgroundColor: '#F9FAFB',
-  borderWidth: 2,
+  borderWidth: 1.5,
   borderColor: '#E5E7EB',
-  borderRadius: 14,
-  paddingHorizontal: 16,
+  borderRadius: 12,
+  paddingHorizontal: 14,
   paddingVertical: 14,
   fontSize: 16,
   color: '#111827',
   fontWeight: '500' as const,
 };
 
-const stepperBtn = {
-  width: 50,
-  height: 56,
+const stepperBtn: object = {
+  width: 52,
+  height: 52,
   borderRadius: 14,
   backgroundColor: '#F3F4F6',
+  borderWidth: 1.5,
+  borderColor: '#E5E7EB',
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
 };
 
-const stepperText = {
+const stepperTxt = {
   fontSize: 22,
   fontWeight: '600' as const,
   color: '#374151',
