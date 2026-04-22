@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -141,7 +141,7 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
 export default function MicronutrientsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['B Vitamins']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([]));
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
@@ -189,7 +189,27 @@ export default function MicronutrientsScreen() {
     return count > 0 ? Math.round(totalPercentage / count) : 0;
   }, [totals, dailyGoals]);
 
+  const prevScoreRef = useRef<number>(0);
+
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    const curr = overallScore;
+
+    if (prev < 25 && curr >= 25) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (prev < 50 && curr >= 50) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (prev < 75 && curr >= 75) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+
+    prevScoreRef.current = curr;
+  }, [overallScore]);
+
   const toggleCategory = (category: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setExpandedCategories(prev => {
       const next = new Set(prev);
       if (next.has(category)) {
@@ -202,10 +222,17 @@ export default function MicronutrientsScreen() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score < 30) return '#EF4444';
+    if (score < 25) return '#EF4444';
     if (score < 50) return '#F59E0B';
-    if (score < 70) return '#10B981';
+    if (score < 75) return '#10B981';
     return '#059669';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score < 25) return 'Needs Attention';
+    if (score < 50) return 'Getting There';
+    if (score < 75) return 'Good Progress';
+    return 'Excellent!';
   };
 
   return (
@@ -217,27 +244,85 @@ export default function MicronutrientsScreen() {
         {/* Header Score Card */}
         <Animated.View
           entering={FadeInDown.delay(100).springify()}
-          className="mx-4 mt-4 bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm"
+          className="mx-4 mt-4 rounded-2xl p-5 shadow-sm"
+          style={{ backgroundColor: getScoreColor(overallScore) + '15', borderWidth: 1.5, borderColor: getScoreColor(overallScore) + '40' }}
         >
-          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-2">Overall Micronutrient Score</Text>
-          <View className="flex-row items-end">
-            <Text className="text-5xl font-bold" style={{ color: getScoreColor(overallScore) }}>
-              {overallScore}
-            </Text>
-            <Text className="text-2xl text-gray-400 mb-1">/100</Text>
+          <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">
+            Micronutrient Score
+          </Text>
+          <View className="flex-row items-center justify-between">
+            <View>
+              <View className="flex-row items-end">
+                <Text className="text-7xl font-bold" style={{ color: getScoreColor(overallScore) }}>
+                  {overallScore}
+                </Text>
+                <Text className="text-3xl font-light text-gray-400 mb-2">/100</Text>
+              </View>
+              <View
+                className="px-3 py-1 rounded-full self-start mt-1"
+                style={{ backgroundColor: getScoreColor(overallScore) + '25' }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: getScoreColor(overallScore) }}>
+                  {getScoreLabel(overallScore)}
+                </Text>
+              </View>
+            </View>
+            {/* Milestone badges */}
+            <View className="items-end gap-y-2">
+              {[75, 50, 25].map(milestone => (
+                <View
+                  key={milestone}
+                  className="flex-row items-center px-3 py-1 rounded-full"
+                  style={{
+                    backgroundColor: overallScore >= milestone
+                      ? getScoreColor(overallScore) + '30'
+                      : 'rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <View
+                    className="w-2 h-2 rounded-full mr-1.5"
+                    style={{
+                      backgroundColor: overallScore >= milestone
+                        ? getScoreColor(overallScore)
+                        : '#D1D5DB',
+                    }}
+                  />
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: overallScore >= milestone ? getScoreColor(overallScore) : '#9CA3AF' }}
+                  >
+                    {milestone}+
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-          <View className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full mt-4 overflow-hidden">
-            <View
-              style={{
-                width: `${overallScore}%`,
-                backgroundColor: getScoreColor(overallScore),
-                height: '100%',
-                borderRadius: 999,
-              }}
-            />
+
+          {/* Progress bar with milestone markers */}
+          <View className="mt-4">
+            <View className="h-4 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <View
+                style={{
+                  width: `${overallScore}%`,
+                  backgroundColor: getScoreColor(overallScore),
+                  height: '100%',
+                  borderRadius: 999,
+                }}
+              />
+            </View>
+            {/* Milestone labels */}
+            <View className="flex-row mt-1.5">
+              <View style={{ flex: 25 }} />
+              <Text className="text-xs text-gray-400" style={{ flex: 0 }}>25</Text>
+              <View style={{ flex: 23 }} />
+              <Text className="text-xs text-gray-400" style={{ flex: 0 }}>50</Text>
+              <View style={{ flex: 23 }} />
+              <Text className="text-xs text-gray-400" style={{ flex: 0 }}>75</Text>
+              <View style={{ flex: 25 }} />
+            </View>
           </View>
-          <Text className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Based on average percentage of daily values met
+          <Text className="text-xs text-gray-400 dark:text-gray-500 mt-4">
+            Average of daily values met across all micronutrients
           </Text>
         </Animated.View>
 

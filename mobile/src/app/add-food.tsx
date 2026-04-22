@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, Keyboard } from 'react-native';
+import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie } from 'lucide-react-native';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
@@ -312,49 +311,47 @@ export default function AddFoodScreen() {
       </View>
 
       {/* Food List */}
-      <ScrollView
-        className="flex-1"
+      <FlatList
+        data={filteredFoods}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-      >
-        {filteredFoods.map((food, index) => (
-          <Animated.View
-            key={food.id}
-            entering={FadeInDown.delay(index * 30).springify()}
+        removeClippedSubviews
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={10}
+        renderItem={({ item: food }) => (
+          <Pressable
+            onPress={() => handleSelectFood(food)}
+            className="flex-row items-center px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-800"
           >
-            <Pressable
-              onPress={() => handleSelectFood(food)}
-              className="flex-row items-center px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-800"
-            >
-              <View className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 items-center justify-center mr-3">
-                {CATEGORY_ICONS[food.category]}
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-medium text-gray-900 dark:text-white">{food.name}</Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {food.servingSize}g • {food.macros.calories} kcal
-                </Text>
-              </View>
-              <View className="items-end">
-                <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                  {food.macros.protein}g P
-                </Text>
-                <Text className="text-xs text-gray-400">
-                  {food.macros.carbohydrates}g C • {food.macros.fat}g F
-                </Text>
-              </View>
-            </Pressable>
-          </Animated.View>
-        ))}
-
-        {filteredFoods.length === 0 && (
+            <View className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 items-center justify-center mr-3">
+              {CATEGORY_ICONS[food.category]}
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-medium text-gray-900 dark:text-white">{food.name}</Text>
+              <Text className="text-sm text-gray-500 dark:text-gray-400">
+                {food.servingSize}g • {food.macros.calories} kcal
+              </Text>
+            </View>
+            <View className="items-end">
+              <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                {food.macros.protein}g P
+              </Text>
+              <Text className="text-xs text-gray-400">
+                {food.macros.carbohydrates}g C • {food.macros.fat}g F
+              </Text>
+            </View>
+          </Pressable>
+        )}
+        ListEmptyComponent={
           <View className="items-center justify-center py-20">
             <Text className="text-gray-400 dark:text-gray-500 text-base">No foods found</Text>
             <Text className="text-gray-400 dark:text-gray-500 text-sm mt-1">Try a different search term</Text>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
     </View>
   );
 }
