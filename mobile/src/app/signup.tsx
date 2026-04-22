@@ -21,6 +21,22 @@ import { useUserStore } from '@/lib/state/user-store';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
+// ─── Colour tokens ────────────────────────────────────────────────────────────
+const C = {
+  bg: '#0D0D0D',
+  surface: '#1A1A1A',
+  surfaceAlt: '#222222',
+  border: '#2A2A2A',
+  borderAlt: '#333333',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#9CA3AF',
+  textMuted: '#555555',
+  green: '#10B981',
+  greenDark: '#059669',
+  greenDim: 'rgba(16,185,129,0.15)',
+  greenDimBorder: 'rgba(16,185,129,0.35)',
+};
+
 const GOALS = [
   { id: 'sleep', label: 'Improve Sleep', emoji: '🌙', desc: 'Better rest & recovery', color: '#8B5CF6' },
   { id: 'recover-perform', label: 'Recover & Perform', emoji: '⚡', desc: 'Athletic performance', color: '#F59E0B' },
@@ -124,78 +140,74 @@ export default function SignupScreen() {
   const heading = STEP_HEADINGS[step];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-      {/* Subtle top gradient */}
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Subtle green glow at top */}
       <LinearGradient
-        colors={['#ECFDF5', '#F9FAFB']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200 }}
+        colors={['rgba(16,185,129,0.12)', 'transparent']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 280 }}
       />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Fixed header: back + progress */}
-        <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 4 }}>
+        {/* ── Header ── */}
+        <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 4 }}>
           {step > 0 ? (
             <Pressable
               onPress={handleBack}
               hitSlop={12}
               style={{
                 width: 40, height: 40, borderRadius: 20,
-                backgroundColor: 'white',
+                backgroundColor: C.surface,
+                borderWidth: 1, borderColor: C.border,
                 alignItems: 'center', justifyContent: 'center',
-                marginBottom: 14,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.07,
-                shadowRadius: 4,
-                elevation: 2,
+                marginBottom: 16,
               }}
             >
-              <ChevronLeft size={20} color="#374151" />
+              <ChevronLeft size={20} color={C.textSecondary} />
             </Pressable>
           ) : (
-            <View style={{ height: 54 }} />
+            <View style={{ height: 56 }} />
           )}
 
-          {/* Step dots / progress bar */}
+          {/* Progress bars */}
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
                 key={i}
                 style={{
-                  height: 4,
+                  height: 3,
                   flex: 1,
                   borderRadius: 2,
-                  backgroundColor: i <= step ? '#10B981' : '#E5E7EB',
+                  backgroundColor: i <= step ? C.green : C.border,
                 }}
               />
             ))}
           </View>
-          <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 6, fontWeight: '500' }}>
-            Step {step + 1} of {TOTAL_STEPS}
+          <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 6, fontWeight: '600', letterSpacing: 0.4 }}>
+            STEP {step + 1} OF {TOTAL_STEPS}
           </Text>
         </View>
 
-        {/* Scrollable content */}
+        {/* ── Scrollable content ── */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Heading — animates per step */}
+          {/* Heading */}
           <Animated.View key={`heading-${step}`} entering={FadeInDown.springify().damping(22)}>
             <Text style={{
-              fontSize: 32, fontWeight: '800', color: '#111827',
-              lineHeight: 40, marginTop: 16, marginBottom: 6,
+              fontSize: 34, fontWeight: '800', color: C.textPrimary,
+              lineHeight: 42, marginTop: 20, marginBottom: 6,
             }}>
               {heading.title}
             </Text>
-            <Text style={{ fontSize: 15, color: '#6B7280', lineHeight: 22, marginBottom: 28 }}>
+            <Text style={{ fontSize: 15, color: C.textSecondary, lineHeight: 22, marginBottom: 32 }}>
               {heading.sub}
             </Text>
           </Animated.View>
@@ -206,25 +218,26 @@ export default function SignupScreen() {
             {/* ── Step 0: Name & Email ── */}
             {step === 0 && (
               <View style={card}>
-                <Text style={label}>Full name</Text>
+                <Text style={fieldLabel}>Full name</Text>
                 <TextInput
-                  style={input}
+                  style={fieldInput}
                   placeholder="e.g. Alex Johnson"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={C.textMuted}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
                   returnKeyType="next"
                   onSubmitEditing={() => emailRef.current?.focus()}
                   blurOnSubmit={false}
+                  selectionColor={C.green}
                 />
-                <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 14 }} />
-                <Text style={label}>Email address</Text>
+                <View style={{ height: 1, backgroundColor: C.border, marginVertical: 16 }} />
+                <Text style={fieldLabel}>Email address</Text>
                 <TextInput
                   ref={emailRef}
-                  style={input}
+                  style={fieldInput}
                   placeholder="you@example.com"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={C.textMuted}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -232,6 +245,7 @@ export default function SignupScreen() {
                   autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleNext}
+                  selectionColor={C.green}
                 />
               </View>
             )}
@@ -240,8 +254,8 @@ export default function SignupScreen() {
             {step === 1 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
-                  <Text style={label}>Your age</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                  <Text style={fieldLabel}>Your age</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
                     <Pressable
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -252,13 +266,14 @@ export default function SignupScreen() {
                       <Text style={stepperTxt}>−</Text>
                     </Pressable>
                     <TextInput
-                      style={[input, { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '800', paddingVertical: 12 }]}
+                      style={[fieldInput, { flex: 1, textAlign: 'center', fontSize: 32, fontWeight: '800', paddingVertical: 10 }]}
                       placeholder="25"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={C.textMuted}
                       value={age}
                       onChangeText={v => setAge(v.replace(/[^0-9]/g, ''))}
                       keyboardType="number-pad"
                       maxLength={3}
+                      selectionColor={C.green}
                     />
                     <Pressable
                       onPress={() => {
@@ -273,10 +288,10 @@ export default function SignupScreen() {
                 </View>
 
                 <View style={card}>
-                  <Text style={label}>Gender</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 6 }}>
+                  <Text style={fieldLabel}>Gender</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
                     {GENDERS.map(g => {
-                      const selected = gender === g.id;
+                      const sel = gender === g.id;
                       return (
                         <Pressable
                           key={g.id}
@@ -285,12 +300,12 @@ export default function SignupScreen() {
                             paddingHorizontal: 18,
                             paddingVertical: 12,
                             borderRadius: 12,
-                            borderWidth: 2,
-                            borderColor: selected ? '#10B981' : '#E5E7EB',
-                            backgroundColor: selected ? '#ECFDF5' : '#F9FAFB',
+                            borderWidth: 1.5,
+                            borderColor: sel ? C.green : C.border,
+                            backgroundColor: sel ? C.greenDim : C.surfaceAlt,
                           }}
                         >
-                          <Text style={{ fontWeight: '600', fontSize: 14, color: selected ? '#059669' : '#374151' }}>
+                          <Text style={{ fontWeight: '600', fontSize: 14, color: sel ? C.green : C.textSecondary }}>
                             {g.label}
                           </Text>
                         </Pressable>
@@ -305,7 +320,7 @@ export default function SignupScreen() {
             {step === 2 && (
               <View style={{ gap: 10 }}>
                 {GOALS.map((goal, i) => {
-                  const selected = goals.includes(goal.id);
+                  const sel = goals.includes(goal.id);
                   return (
                     <Animated.View
                       key={goal.id}
@@ -318,29 +333,24 @@ export default function SignupScreen() {
                           alignItems: 'center',
                           padding: 16,
                           borderRadius: 16,
-                          borderWidth: 2,
-                          borderColor: selected ? goal.color : '#E5E7EB',
-                          backgroundColor: selected ? goal.color + '12' : 'white',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: 0.04,
-                          shadowRadius: 3,
-                          elevation: 1,
+                          borderWidth: 1.5,
+                          borderColor: sel ? goal.color + '80' : C.border,
+                          backgroundColor: sel ? goal.color + '15' : C.surface,
                         }}
                       >
                         <Text style={{ fontSize: 26, marginRight: 14 }}>{goal.emoji}</Text>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: '700', fontSize: 15, color: '#111827' }}>{goal.label}</Text>
-                          <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{goal.desc}</Text>
+                          <Text style={{ fontWeight: '700', fontSize: 15, color: C.textPrimary }}>{goal.label}</Text>
+                          <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{goal.desc}</Text>
                         </View>
                         <View style={{
                           width: 26, height: 26, borderRadius: 13,
                           borderWidth: 2,
-                          borderColor: selected ? goal.color : '#D1D5DB',
-                          backgroundColor: selected ? goal.color : 'transparent',
+                          borderColor: sel ? goal.color : C.borderAlt,
+                          backgroundColor: sel ? goal.color : 'transparent',
                           alignItems: 'center', justifyContent: 'center',
                         }}>
-                          {selected && <Check size={14} color="white" />}
+                          {sel && <Check size={14} color="white" />}
                         </View>
                       </Pressable>
                     </Animated.View>
@@ -353,15 +363,15 @@ export default function SignupScreen() {
             {step === 3 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
-                  <Text style={[label, { marginBottom: 14 }]}>Your details</Text>
+                  <Text style={[fieldLabel, { marginBottom: 16 }]}>Your details</Text>
                   <SummaryRow label="Name" value={name} />
-                  <Divider />
+                  <DividerLine />
                   <SummaryRow label="Email" value={email} />
-                  <Divider />
+                  <DividerLine />
                   <SummaryRow label="Age" value={`${age} years old`} />
-                  <Divider />
+                  <DividerLine />
                   <SummaryRow label="Gender" value={GENDERS.find(g => g.id === gender)?.label ?? gender} />
-                  <Divider />
+                  <DividerLine />
                   <SummaryRow
                     label="Goals"
                     value={goals.map(id => GOALS.find(g => g.id === id)?.label ?? id).join(', ')}
@@ -375,16 +385,16 @@ export default function SignupScreen() {
                   <View style={{
                     width: 26, height: 26, borderRadius: 8, marginTop: 1,
                     borderWidth: 2,
-                    borderColor: agreedToPolicy ? '#10B981' : '#D1D5DB',
-                    backgroundColor: agreedToPolicy ? '#10B981' : 'white',
+                    borderColor: agreedToPolicy ? C.green : C.borderAlt,
+                    backgroundColor: agreedToPolicy ? C.green : 'transparent',
                     alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
                     {agreedToPolicy && <Check size={14} color="white" />}
                   </View>
-                  <Text style={{ flex: 1, fontSize: 14, color: '#4B5563', lineHeight: 21 }}>
+                  <Text style={{ flex: 1, fontSize: 14, color: C.textSecondary, lineHeight: 21 }}>
                     I agree to the{' '}
-                    <Text style={{ color: '#10B981', fontWeight: '600' }}>Nutrient Nudge Privacy Policy</Text>
+                    <Text style={{ color: C.green, fontWeight: '600' }}>Nutrient Nudge Privacy Policy</Text>
                     {' '}and consent to my data being used to improve the app experience.
                   </Text>
                 </Pressable>
@@ -398,51 +408,60 @@ export default function SignupScreen() {
         {!!errorMsg && (
           <View style={{
             marginHorizontal: 20, marginBottom: 8,
-            backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12,
+            backgroundColor: 'rgba(239,68,68,0.15)',
+            borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+            borderRadius: 12, padding: 12,
           }}>
-            <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
+            <Text style={{ color: '#F87171', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
           </View>
         )}
 
-        {/* Continue / Submit */}
+        {/* ── Continue / Submit ── */}
         <View style={{
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 8,
-          paddingTop: 10,
-          backgroundColor: '#F9FAFB',
+          paddingBottom: insets.bottom + 12,
+          paddingTop: 12,
+          backgroundColor: C.bg,
           borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
+          borderTopColor: C.border,
         }}>
           <Pressable
             onPress={handleNext}
             disabled={!isStepValid || mutation.isPending}
-            style={({ pressed }) => ({
-              paddingVertical: 17,
-              borderRadius: 16,
-              backgroundColor: isStepValid ? '#10B981' : '#E5E7EB',
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 8,
-              opacity: pressed ? 0.88 : 1,
-            })}
+            style={({ pressed }) => ({ borderRadius: 16, overflow: 'hidden', opacity: pressed ? 0.85 : 1 })}
           >
-            {mutation.isPending ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <>
-                <Text style={{
-                  color: isStepValid ? 'white' : '#9CA3AF',
-                  fontWeight: '700',
-                  fontSize: 17,
-                }}>
-                  {step < TOTAL_STEPS - 1 ? 'Continue' : 'Create Account'}
-                </Text>
-                {step < TOTAL_STEPS - 1 && (
-                  <ChevronRight size={18} color={isStepValid ? 'white' : '#9CA3AF'} />
-                )}
-              </>
-            )}
+            <LinearGradient
+              colors={isStepValid ? [C.greenDark, C.green] : [C.surface, C.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                paddingVertical: 17,
+                borderRadius: 16,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+                borderWidth: isStepValid ? 0 : 1,
+                borderColor: C.border,
+              }}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Text style={{
+                    color: isStepValid ? 'white' : C.textMuted,
+                    fontWeight: '700',
+                    fontSize: 17,
+                  }}>
+                    {step < TOTAL_STEPS - 1 ? 'Continue' : 'Create Account'}
+                  </Text>
+                  {step < TOTAL_STEPS - 1 && isStepValid && (
+                    <ChevronRight size={18} color="white" />
+                  )}
+                </>
+              )}
+            </LinearGradient>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -450,15 +469,15 @@ export default function SignupScreen() {
   );
 }
 
-function Divider() {
-  return <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 10 }} />;
+function DividerLine() {
+  return <View style={{ height: 1, backgroundColor: '#1F1F1F', marginVertical: 10 }} />;
 }
 
 function SummaryRow({ label: lbl, value }: { label: string; value: string }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500', width: 64 }}>{lbl}</Text>
-      <Text style={{ fontSize: 13, color: '#111827', fontWeight: '600', flex: 1, textAlign: 'right' }} numberOfLines={2}>
+      <Text style={{ fontSize: 13, color: C.textMuted, fontWeight: '600', width: 64, letterSpacing: 0.3 }}>{lbl}</Text>
+      <Text style={{ fontSize: 13, color: C.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' }} numberOfLines={2}>
         {value}
       </Text>
     </View>
@@ -466,36 +485,31 @@ function SummaryRow({ label: lbl, value }: { label: string; value: string }) {
 }
 
 const card: object = {
-  backgroundColor: 'white',
+  backgroundColor: C.surface,
   borderRadius: 18,
   padding: 18,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 6,
-  elevation: 2,
   borderWidth: 1,
-  borderColor: '#F3F4F6',
+  borderColor: C.border,
 };
 
-const label = {
-  fontSize: 12,
+const fieldLabel = {
+  fontSize: 11,
   fontWeight: '700' as const,
-  color: '#6B7280',
+  color: C.textMuted,
   textTransform: 'uppercase' as const,
-  letterSpacing: 0.6,
-  marginBottom: 10,
+  letterSpacing: 0.8,
+  marginBottom: 8,
 };
 
-const input = {
-  backgroundColor: '#F9FAFB',
+const fieldInput = {
+  backgroundColor: C.surfaceAlt,
   borderWidth: 1.5,
-  borderColor: '#E5E7EB',
+  borderColor: C.borderAlt,
   borderRadius: 12,
   paddingHorizontal: 14,
   paddingVertical: 14,
   fontSize: 16,
-  color: '#111827',
+  color: C.textPrimary,
   fontWeight: '500' as const,
 };
 
@@ -503,15 +517,15 @@ const stepperBtn: object = {
   width: 52,
   height: 52,
   borderRadius: 14,
-  backgroundColor: '#F3F4F6',
+  backgroundColor: C.surfaceAlt,
   borderWidth: 1.5,
-  borderColor: '#E5E7EB',
+  borderColor: C.border,
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
 };
 
 const stepperTxt = {
-  fontSize: 22,
-  fontWeight: '600' as const,
-  color: '#374151',
+  fontSize: 24,
+  fontWeight: '500' as const,
+  color: C.textSecondary,
 };
