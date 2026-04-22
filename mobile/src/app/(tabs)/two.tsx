@@ -2,12 +2,13 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { MICRONUTRIENT_INFO, Micronutrients } from '@/lib/types/nutrition';
+import { ShareScoreModal } from '@/components/ShareScoreModal';
 
 type MicroCategory = 'B Vitamins' | 'Fat-Soluble Vitamins' | 'Water-Soluble Vitamins' | 'Major Minerals' | 'Trace Minerals';
 
@@ -142,6 +143,7 @@ export default function MicronutrientsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([]));
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
@@ -247,9 +249,24 @@ export default function MicronutrientsScreen() {
           className="mx-4 mt-4 rounded-2xl p-5 shadow-sm"
           style={{ backgroundColor: getScoreColor(overallScore) + '15', borderWidth: 1.5, borderColor: getScoreColor(overallScore) + '40' }}
         >
-          <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">
-            Micronutrient Score
-          </Text>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+              Micronutrient Score
+            </Text>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShareModalVisible(true);
+              }}
+              className="flex-row items-center px-3 py-1.5 rounded-full"
+              style={{ backgroundColor: getScoreColor(overallScore) + '20' }}
+            >
+              <Share2 size={12} color={getScoreColor(overallScore)} />
+              <Text className="text-xs font-semibold ml-1.5" style={{ color: getScoreColor(overallScore) }}>
+                Share
+              </Text>
+            </Pressable>
+          </View>
           <View className="flex-row items-center justify-between">
             <View>
               <View className="flex-row items-end">
@@ -426,6 +443,15 @@ export default function MicronutrientsScreen() {
           <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
         </Pressable>
       </ScrollView>
+
+      <ShareScoreModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        score={overallScore}
+        scoreColor={getScoreColor(overallScore)}
+        scoreLabel={getScoreLabel(overallScore)}
+        date={selectedDate}
+      />
     </View>
   );
 }
