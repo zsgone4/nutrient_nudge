@@ -9,6 +9,7 @@ interface UserStore {
   _hasHydrated: boolean;
   setSignedUp: (userId: string, email: string) => void;
   setHasHydrated: (value: boolean) => void;
+  clearUser: () => void;
 }
 
 export const useUserStore = create<UserStore>()(
@@ -20,6 +21,7 @@ export const useUserStore = create<UserStore>()(
       _hasHydrated: false,
       setSignedUp: (userId, email) => set({ hasSignedUp: true, userId, userEmail: email }),
       setHasHydrated: (value) => set({ _hasHydrated: value }),
+      clearUser: () => set({ hasSignedUp: false, userId: null, userEmail: null }),
     }),
     {
       name: 'user-store',

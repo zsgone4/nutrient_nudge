@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import "./env";
 import { sampleRouter } from "./routes/sample";
 import { signupRouter } from "./routes/signup";
+import { deleteAccountRouter } from "./routes/deleteAccount";
 import { logger } from "hono/logger";
 
 const app = new Hono();
@@ -36,6 +37,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Routes
 app.route("/api/sample", sampleRouter);
 app.route("/api/signup", signupRouter);
+app.route("/api/account", deleteAccountRouter);
 
 const port = Number(process.env.PORT) || 3000;
 

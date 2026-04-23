@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen } from 'lucide-react-native';
+import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore, calculateTDEE, calculateTargetCalories } from '@/lib/state/nutrition-store';
+import { useUserStore } from '@/lib/state/user-store';
 import {
   Sex,
   ActivityLevel,
@@ -15,6 +16,8 @@ import {
   GOAL_LABELS,
   UserProfile,
 } from '@/lib/types/nutrition';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
 type SetupStep = 'basics' | 'activity' | 'goal' | 'summary';
 
@@ -25,6 +28,31 @@ export default function ProfileScreen() {
   const userProfile = useNutritionStore(s => s.userProfile);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const setUserProfile = useNutritionStore(s => s.setUserProfile);
+
+  const userId = useUserStore(s => s.userId);
+  const clearUser = useUserStore(s => s.clearUser);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/account/${userId}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error ?? 'Failed to delete account');
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clearUser();
+      router.replace('/signup');
+    } catch (e: any) {
+      setDeleteError(e.message ?? 'Something went wrong');
+      setIsDeleting(false);
+    }
+  };
 
   // Local state for editing
   const [age, setAge] = useState(userProfile.age.toString());
@@ -393,6 +421,15 @@ export default function ProfileScreen() {
             <Text className="text-emerald-600 dark:text-emerald-400 font-semibold">Edit Profile</Text>
           </Pressable>
 
+          {/* Delete Account */}
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowDeleteModal(true); }}
+            className="flex-row items-center justify-center bg-white dark:bg-gray-900 rounded-xl py-4 mt-3"
+          >
+            <Trash2 size={16} color="#EF4444" />
+            <Text className="text-red-500 font-semibold ml-2">Delete Account</Text>
+          </Pressable>
+
           {/* Info Card */}
           <View className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mt-4">
             <Text className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
@@ -422,6 +459,48 @@ export default function ProfileScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <Animated.View entering={FadeInDown.springify()} className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-6 w-full max-w-sm">
+            <View className="items-center mb-4">
+              <View className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 items-center justify-center mb-3">
+                <Trash2 size={28} color="#EF4444" />
+              </View>
+              <Text className="text-xl font-bold text-gray-900 dark:text-white text-center">Delete Account?</Text>
+              <Text className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">
+                This will permanently delete your account and all associated data. This action cannot be undone.
+              </Text>
+            </View>
+
+            {deleteError && (
+              <View className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 mb-4">
+                <Text className="text-red-600 dark:text-red-400 text-sm text-center">{deleteError}</Text>
+              </View>
+            )}
+
+            <Pressable
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+              className="bg-red-500 rounded-xl py-4 items-center mb-3"
+            >
+              {isDeleting
+                ? <ActivityIndicator color="#fff" />
+                : <Text className="text-white font-semibold text-base">Yes, Delete My Account</Text>
+              }
+            </Pressable>
+
+            <Pressable
+              onPress={() => { setShowDeleteModal(false); setDeleteError(null); }}
+              disabled={isDeleting}
+              className="bg-gray-100 dark:bg-gray-800 rounded-xl py-4 items-center"
+            >
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold">Cancel</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
