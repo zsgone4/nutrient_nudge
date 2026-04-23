@@ -7,7 +7,9 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
-import { MICRONUTRIENT_INFO, Micronutrients } from '@/lib/types/nutrition';
+import { MICRONUTRIENT_INFO, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
+
+const EMPTY_ENTRIES: FoodLogEntry[] = [];
 import { ShareScoreModal } from '@/components/ShareScoreModal';
 
 type MicroCategory = 'B Vitamins' | 'Fat-Soluble Vitamins' | 'Water-Soluble Vitamins' | 'Major Minerals' | 'Trace Minerals';
@@ -147,9 +149,7 @@ export default function MicronutrientsScreen() {
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
-  // Subscribe directly to the current date's entries (not the whole logs object)
-  // so the component re-renders whenever entries for today change.
-  const entries = useNutritionStore(s => s.logs[s.selectedDate] || []);
+  const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
 
   const totals = useMemo(() => {
     const macros = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0 };

@@ -4,9 +4,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  interpolate,
 } from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 import { cn } from '@/lib/cn';
 
 interface CircularProgressProps {
@@ -29,44 +28,38 @@ export function CircularProgress({
   className,
 }: CircularProgressProps) {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
+  const cx = size / 2;
+  const cy = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - clampedProgress);
 
   return (
     <View className={cn('items-center justify-center', className)} style={{ width: size, height: size }}>
-      <View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: strokeWidth,
-          borderColor: backgroundColor,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          transform: [{ rotate: '-90deg' }],
-        }}
-      >
-        <View
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: color,
-            borderTopColor: 'transparent',
-            borderRightColor: clampedProgress > 0.25 ? color : 'transparent',
-            borderBottomColor: clampedProgress > 0.5 ? color : 'transparent',
-            borderLeftColor: clampedProgress > 0.75 ? color : 'transparent',
-          }}
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          stroke={backgroundColor}
+          strokeWidth={strokeWidth}
+          fill="none"
         />
-      </View>
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          rotation={-90}
+          originX={cx}
+          originY={cy}
+        />
+      </Svg>
       <View className="items-center justify-center">
         {children}
       </View>

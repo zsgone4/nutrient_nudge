@@ -10,7 +10,9 @@ import * as Haptics from 'expo-haptics';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComponents';
 import { getSmartRecommendations } from '@/lib/utils/recommendations';
-import { MealType, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
+import { MealType, Macronutrients, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
+
+const EMPTY_ENTRIES: FoodLogEntry[] = [];
 
 const MEAL_CONFIG: Record<MealType, { label: string; icon: React.ReactNode; color: string }> = {
   breakfast: { label: 'Breakfast', icon: <Coffee size={24} color="#F59E0B" />, color: '#F59E0B' },
@@ -36,13 +38,9 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Subscribe to actual state values that will trigger re-renders
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
-  const logs = useNutritionStore(s => s.logs);
-
-  // Get entries for the selected date
-  const entries = logs[selectedDate] || [];
+  const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
 
   // Calculate totals directly from entries
   const totals = React.useMemo(() => {
