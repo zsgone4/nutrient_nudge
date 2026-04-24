@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef } from 'react';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import {
   View,
   Text,
@@ -206,7 +205,7 @@ export default function SignupScreen() {
           bounces={false}
         >
           {/* Heading */}
-          <Animated.View key={`heading-${step}`} entering={FadeInDown.springify().damping(22)}>
+          <View key={`heading-${step}`}>
             <Text style={{
               fontSize: 34, fontWeight: '800', color: C.textPrimary,
               lineHeight: 42, marginTop: 20, marginBottom: 6,
@@ -216,10 +215,10 @@ export default function SignupScreen() {
             <Text style={{ fontSize: 15, color: C.textSecondary, lineHeight: 22, marginBottom: 32 }}>
               {heading.sub}
             </Text>
-          </Animated.View>
+          </View>
 
           {/* Step body */}
-          <Animated.View key={`body-${step}`} entering={FadeInDown.delay(80).springify().damping(22)}>
+          <View key={`body-${step}`}>
 
             {/* ── Step 0: Name & Email ── */}
             {step === 0 && (
@@ -328,9 +327,8 @@ export default function SignupScreen() {
                 {GOALS.map((goal, i) => {
                   const sel = goals.includes(goal.id);
                   return (
-                    <Animated.View
+                    <View
                       key={goal.id}
-                      entering={FadeInRight.delay(i * 60).springify().damping(20)}
                     >
                       <Pressable
                         onPress={() => toggleGoal(goal.id)}
@@ -359,7 +357,7 @@ export default function SignupScreen() {
                           {sel && <Check size={14} color="white" />}
                         </View>
                       </Pressable>
-                    </Animated.View>
+                    </View>
                   );
                 })}
               </View>
@@ -407,7 +405,7 @@ export default function SignupScreen() {
               </View>
             )}
 
-          </Animated.View>
+          </View>
         </ScrollView>
 
         {/* Error */}

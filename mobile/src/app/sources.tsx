@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ExternalLink, BookOpen, FlaskConical, Wheat, X } from 'lucide-react-native';
@@ -118,7 +117,7 @@ function CitationCard({ citation, delay }: { citation: Citation; delay: number }
   };
 
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()}>
+    <View>
       <Pressable
         onPress={handleOpen}
         className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-3"
@@ -146,7 +145,7 @@ function CitationCard({ citation, delay }: { citation: Citation; delay: number }
           </Text>
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -182,8 +181,7 @@ export default function SourcesScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Disclaimer */}
-        <Animated.View
-          entering={FadeInDown.delay(50).springify()}
+        <View
           className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 mb-6"
         >
           <Text className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
@@ -192,22 +190,21 @@ export default function SourcesScreen() {
           <Text className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             This app provides general nutritional information for educational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider before making significant changes to your diet.
           </Text>
-        </Animated.View>
+        </View>
 
         {SECTIONS.map((section, sectionIdx) => {
           const sectionDelay = 100 + sectionIdx * 60;
           return (
             <View key={section.heading} className="mb-6">
               {/* Section header */}
-              <Animated.View
-                entering={FadeInDown.delay(sectionDelay).springify()}
+              <View
                 style={{ backgroundColor: section.bgColor }}
                 className="rounded-xl px-4 py-3 mb-3"
               >
                 <Text className="text-sm font-bold" style={{ color: section.color }}>
                   {section.heading}
                 </Text>
-              </Animated.View>
+              </View>
 
               {section.citations.map((citation, citIdx) => {
                 delayCounter += 1;

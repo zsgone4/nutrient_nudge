@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, Pressable, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/cn';
 
 interface CircularProgressProps {
@@ -113,18 +112,14 @@ interface MealCardProps {
 }
 
 export function MealCard({ title, calories, itemCount, icon, onPress, onAddPress, color }: MealCardProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15 });
+    Animated.spring(scale, { toValue: 0.97, damping: 15, useNativeDriver: true }).start();
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15 });
+    Animated.spring(scale, { toValue: 1, damping: 15, useNativeDriver: true }).start();
   };
 
   return (
@@ -132,7 +127,7 @@ export function MealCard({ title, calories, itemCount, icon, onPress, onAddPress
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={animatedStyle}
+      style={[{ transform: [{ scale }] }]}
       className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-3 shadow-sm"
     >
       <View className="flex-row items-center">

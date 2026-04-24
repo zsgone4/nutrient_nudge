@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X } from 'lucide-react-native';
@@ -186,9 +185,8 @@ export default function MealDetailScreen() {
               const gramsAmount = Math.round(entry.food.servingSize * currentServings);
 
               return (
-                <Animated.View
+                <View
                   key={entry.id}
-                  entering={FadeInDown.delay(index * 50).springify()}
                   className="bg-white dark:bg-gray-900 mx-4 mb-2 rounded-xl overflow-hidden"
                 >
                   <View className="p-4">
@@ -287,7 +285,7 @@ export default function MealDetailScreen() {
                       </View>
                     )}
                   </View>
-                </Animated.View>
+                </View>
               );
             })}
           </View>

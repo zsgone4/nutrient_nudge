@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -194,8 +193,7 @@ export default function DashboardScreen() {
       >
         {/* Smart Recommendations */}
         {recommendations.length > 0 && remainingCalories > 50 && (
-          <Animated.View
-            entering={FadeInDown.delay(300).springify()}
+          <View
             className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-4 shadow-sm"
           >
             <View className="flex-row items-center mb-3">
@@ -228,11 +226,11 @@ export default function DashboardScreen() {
                 <ChevronRight size={16} color="#9CA3AF" />
               </Pressable>
             ))}
-          </Animated.View>
+          </View>
         )}
 
         {/* Meals */}
-        <Animated.View entering={FadeInDown.delay(400).springify()}>
+        <View>
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">Meals</Text>
           <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             Tap a meal to view or edit, or press + to add food
@@ -255,11 +253,10 @@ export default function DashboardScreen() {
               />
             );
           })}
-        </Animated.View>
+        </View>
 
         {/* Quick Stats */}
-        <Animated.View
-          entering={FadeInDown.delay(500).springify()}
+        <View
           className="mt-4"
         >
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">Detailed Macros</Text>
@@ -277,7 +274,7 @@ export default function DashboardScreen() {
               color="#F59E0B"
             />
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

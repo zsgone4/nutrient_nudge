@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2 } from 'lucide-react-native';
@@ -104,8 +103,7 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
       </View>
 
       {expanded && (
-        <Animated.View
-          entering={FadeInDown.duration(200)}
+        <View
           className="px-3 pb-3 border-t border-gray-100 dark:border-gray-800 pt-3"
         >
           <View className="flex-row items-start">
@@ -135,7 +133,7 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
               </Text>
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
     </Pressable>
   );
@@ -264,8 +262,7 @@ export default function MicronutrientsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header Score Card */}
-        <Animated.View
-          entering={FadeInDown.delay(100).springify()}
+        <View
           className="mx-4 mt-4 rounded-2xl p-5 shadow-sm"
           style={{ backgroundColor: getScoreColor(overallScore) + '15', borderWidth: 1.5, borderColor: getScoreColor(overallScore) + '40' }}
         >
@@ -361,7 +358,7 @@ export default function MicronutrientsScreen() {
           <Text className="text-xs text-gray-400 dark:text-gray-500 mt-4">
             Average of daily values met across all micronutrients
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Legend */}
         <View className="flex-row justify-center mt-4 mb-2 px-4 flex-wrap">
@@ -386,9 +383,8 @@ export default function MicronutrientsScreen() {
           const isExpanded = expandedCategories.has(category);
 
           return (
-            <Animated.View
+            <View
               key={category}
-              entering={FadeInDown.delay(200 + categoryIndex * 100).springify()}
               className="mx-4 mt-4"
             >
               <Pressable
@@ -424,7 +420,7 @@ export default function MicronutrientsScreen() {
                   ))}
                 </View>
               )}
-            </Animated.View>
+            </View>
           );
         })}
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2 } from 'lucide-react-native';
@@ -98,7 +97,7 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.delay(100).springify()} className="p-4">
+          <View className="p-4">
             <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Let's get to know you
             </Text>
@@ -171,7 +170,7 @@ export default function ProfileScreen() {
               />
               <Text className="text-gray-400">kg</Text>
             </View>
-          </Animated.View>
+          </View>
         </ScrollView>
 
         {/* Continue Button */}
@@ -198,7 +197,7 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.delay(100).springify()} className="p-4">
+          <View className="p-4">
             <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               How active are you?
             </Text>
@@ -207,7 +206,7 @@ export default function ProfileScreen() {
             </Text>
 
             {(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((level, index) => (
-              <Animated.View key={level} entering={FadeInDown.delay(150 + index * 50).springify()}>
+              <View key={level}>
                 <Pressable
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActivityLevel(level); }}
                   className={`flex-row items-center p-4 rounded-xl mb-3 ${
@@ -231,9 +230,9 @@ export default function ProfileScreen() {
                   </Text>
                   {activityLevel === level && <Check size={20} color="#ffffff" />}
                 </Pressable>
-              </Animated.View>
+              </View>
             ))}
-          </Animated.View>
+          </View>
         </ScrollView>
 
         {/* Buttons */}
@@ -268,7 +267,7 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.delay(100).springify()} className="p-4">
+          <View className="p-4">
             <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               What's your goal?
             </Text>
@@ -287,7 +286,7 @@ export default function ProfileScreen() {
               const isSelected = goal === g;
 
               return (
-                <Animated.View key={g} entering={FadeInDown.delay(150 + index * 50).springify()}>
+                <View key={g}>
                   <Pressable
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGoal(g); }}
                     className={`p-4 rounded-xl mb-3 ${
@@ -314,10 +313,10 @@ export default function ProfileScreen() {
                       {isSelected && <Check size={20} color="#ffffff" />}
                     </View>
                   </Pressable>
-                </Animated.View>
+                </View>
               );
             })}
-          </Animated.View>
+          </View>
         </ScrollView>
 
         {/* Buttons */}
@@ -351,7 +350,7 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.delay(100).springify()} className="p-4">
+        <View className="p-4">
           {/* Calorie Target Card */}
           <View className="bg-emerald-500 rounded-2xl p-6 mb-4">
             <Text className="text-white/70 text-sm mb-1">Your Daily Calorie Target</Text>
@@ -457,13 +456,13 @@ export default function ProfileScreen() {
             </View>
             <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       {/* Delete Account Confirmation Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
         <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <Animated.View entering={FadeInDown.springify()} className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-6 w-full max-w-sm">
+          <View className="bg-white dark:bg-gray-900 rounded-2xl p-6 mx-6 w-full max-w-sm">
             <View className="items-center mb-4">
               <View className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 items-center justify-center mb-3">
                 <Trash2 size={28} color="#EF4444" />
@@ -498,7 +497,7 @@ export default function ProfileScreen() {
             >
               <Text className="text-gray-700 dark:text-gray-300 font-semibold">Cancel</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </View>

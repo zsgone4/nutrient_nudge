@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -132,8 +131,7 @@ export function ShareScoreModal({
       <View style={StyleSheet.absoluteFill}>
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)' }]} onPress={handleClose} />
 
-        <Animated.View
-          entering={SlideInDown.springify().damping(18)}
+        <View
           style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}
         >
           {/* Close button */}
@@ -257,7 +255,7 @@ export function ShareScoreModal({
           <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 12, textAlign: 'center' }}>
             Opens your share sheet — select Instagram or Stories
           </Text>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
