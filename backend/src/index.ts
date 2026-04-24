@@ -6,6 +6,10 @@ import "./env";
 import { signupRouter } from "./routes/signup";
 import { deleteAccountRouter } from "./routes/deleteAccount";
 import { updateProfileRouter } from "./routes/updateProfile";
+import { foodsRouter } from "./routes/foods";
+import { foodLogsRouter } from "./routes/foodLogs";
+import { userProfileRouter } from "./routes/userProfile";
+import { goalsRouter } from "./routes/goals";
 
 const app = new Hono();
 
@@ -40,6 +44,10 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/signup", signupRouter);
 app.route("/api/account", deleteAccountRouter);
 app.route("/api/profile", updateProfileRouter);
+app.route("/api/foods", foodsRouter);
+app.route("/api/food-logs", foodLogsRouter);
+app.route("/api/user-profile", userProfileRouter);
+app.route("/api/goals", goalsRouter);
 
 const port = Number(process.env.PORT) || 3000;
 

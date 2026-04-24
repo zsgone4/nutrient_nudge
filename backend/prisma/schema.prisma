@@ -5,21 +5,98 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// For cloud/production, change provider to "postgresql" and update DATABASE_URL.
-// For local development, SQLite works out of the box.
+// PostgreSQL for production/cloud
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Signup {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  name           String
-  age            Int
-  gender         String
-  trainingGoal   String?
-  goals          String
-  agreedToPolicy Boolean
-  createdAt      DateTime @default(now())
+  id               String         @id @default(cuid())
+  email            String         @unique
+  name             String
+  age              Int
+  gender           String
+  trainingGoal     String?
+  goals            String
+  agreedToPolicy   Boolean
+  createdAt        DateTime       @default(now())
+  userProfile      UserProfile?
+  foodLogEntries   FoodLogEntry[]
+}
+
+model UserProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             Signup   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm         Int
+  weightKg         Float
+  sex              String   // 'male' | 'female'
+  activityLevel    String   // 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+  goal             String   // 'aggressive_cut' | 'conservative_cut' | 'maintain' | 'conservative_bulk' | 'aggressive_bulk'
+  isSetup          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Food {
+  id               String         @id @default(cuid())
+  name             String
+  brand            String?
+  servingSize      Float
+  servingUnit      String
+  category         String         // 'fruits' | 'vegetables' | 'grains' | 'protein' | 'dairy' | 'fats' | 'snacks' | 'beverages' | 'prepared'
+  image            String?
+  
+  // Macronutrients
+  calories         Float
+  protein          Float          // grams
+  carbohydrates    Float          // grams
+  fat              Float          // grams
+  fiber            Float          // grams
+  sugar            Float          // grams
+  
+  // Micronutrients (all in appropriate units as per nutrition.ts)
+  vitaminA         Float          // mcg RAE
+  vitaminB1        Float          // mg
+  vitaminB2        Float          // mg
+  vitaminB3        Float          // mg
+  vitaminB5        Float          // mg
+  vitaminB6        Float          // mg
+  vitaminB7        Float          // mcg
+  vitaminB9        Float          // mcg
+  vitaminB12       Float          // mcg
+  vitaminC         Float          // mg
+  vitaminD         Float          // mcg
+  vitaminE         Float          // mg
+  vitaminK         Float          // mcg
+  
+  calcium          Float          // mg
+  iron             Float          // mg
+  magnesium        Float          // mg
+  phosphorus       Float          // mg
+  potassium        Float          // mg
+  sodium           Float          // mg
+  zinc             Float          // mg
+  copper           Float          // mg
+  manganese        Float          // mg
+  selenium         Float          // mcg
+  chromium         Float          // mcg
+  iodine           Float          // mcg
+  
+  foodLogEntries   FoodLogEntry[]
+  createdAt        DateTime       @default(now())
+}
+
+model FoodLogEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  user             Signup   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId           String
+  food             Food     @relation(fields: [foodId], references: [id])
+  servings         Float
+  mealType         String   // 'breakfast' | 'lunch' | 'dinner' | 'snacks'
+  date             String   // YYYY-MM-DD format
+  timestamp        BigInt
+  createdAt        DateTime @default(now())
 }
