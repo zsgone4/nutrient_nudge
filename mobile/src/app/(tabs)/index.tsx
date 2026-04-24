@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Coffee, Sun, Moon, Cookie, Sparkles, ChevronRight } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -124,13 +124,12 @@ export default function DashboardScreen() {
         end={{ x: 1, y: 1 }}
         style={{ paddingTop: insets.top, paddingBottom: 80, paddingHorizontal: 20 }}
       >
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text className="text-white/70 text-sm font-medium mt-4">{dateLabel}</Text>
           <Text className="text-white text-2xl font-bold mt-1">Daily Summary</Text>
-        </Animated.View>
+        </View>
 
-        <Animated.View
-          entering={FadeInDown.delay(200).springify()}
+        <View
           className="flex-row items-center justify-between mt-6"
         >
           <View className="items-center">
@@ -185,7 +184,7 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
       </LinearGradient>
 
       <ScrollView

@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ExternalLink, BookOpen, FlaskConical, Wheat, X } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 interface Citation {

@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X } from 'lucide-react-native';
-import Animated, { FadeInDown, FadeInRight, SlideOutRight } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';

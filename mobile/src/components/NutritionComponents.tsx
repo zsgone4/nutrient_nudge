@@ -1,11 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { cn } from '@/lib/cn';
 
 interface CircularProgressProps {

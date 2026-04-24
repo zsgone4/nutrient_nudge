@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import {
   View,
   Text,
@@ -13,7 +14,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 

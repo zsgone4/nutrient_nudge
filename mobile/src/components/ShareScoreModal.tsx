@@ -8,11 +8,11 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { X, Share2 } from 'lucide-react-native';
 
 interface ShareScoreModalProps {
