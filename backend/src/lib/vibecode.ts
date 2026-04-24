@@ -1,3 +1,2 @@
-import { createVibecodeSDK } from "@vibecodeapp/backend-sdk";
-
-export const vibecode = createVibecodeSDK();
+// Vibecode SDK removed — file kept to avoid import errors if referenced elsewhere
+export {};
