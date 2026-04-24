@@ -16,6 +16,7 @@ model Signup {
   name           String
   age            Int
   gender         String
+  trainingGoal   String?
   goals          String
   agreedToPolicy Boolean
   createdAt      DateTime @default(now())

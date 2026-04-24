@@ -14,13 +14,12 @@ import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
-// ─── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
   bg: '#0D0D0D',
   surface: '#1A1A1A',
@@ -64,26 +63,33 @@ const GENDERS = [
 const TOTAL_STEPS = 5;
 
 const STEP_HEADINGS = [
-  { title: 'Welcome to\nNutrient Nudge 🌿', sub: "Tell us about yourself so we can personalise your experience." },
-  { title: 'About you', sub: 'This helps us understand your nutritional needs.' },
-  { title: "What are you\ntraining for? 🎯", sub: "Pick your main focus — we'll build your plan around it." },
-  { title: 'Your health goals', sub: "Select all that apply — we'll tailor your recommendations." },
-  { title: "Almost there! 🎉", sub: 'Review your details before getting started.' },
+  { title: 'Your account\ndetails ✏️', sub: 'Update your name and email address.' },
+  { title: 'About you', sub: 'Keep your details accurate for the best recommendations.' },
+  { title: "What are you\ntraining for? 🎯", sub: "Update your main focus." },
+  { title: 'Your health goals', sub: "Select all that apply." },
+  { title: 'Review changes 👀', sub: 'Everything look right? Hit save to confirm.' },
 ];
 
-export default function SignupScreen() {
+export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const setSignedUp = useUserStore(s => s.setSignedUp);
+
+  const userId = useUserStore(s => s.userId);
+  const storedEmail = useUserStore(s => s.userEmail);
+  const storedName = useUserStore(s => s.userName);
+  const storedAge = useUserStore(s => s.userAge);
+  const storedGender = useUserStore(s => s.userGender);
+  const storedTrainingGoal = useUserStore(s => s.userTrainingGoal);
+  const storedGoals = useUserStore(s => s.userGoals);
+  const updateSignupProfile = useUserStore(s => s.updateSignupProfile);
 
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [age, setAge] = useState('25');
-  const [gender, setGender] = useState('');
-  const [trainingGoal, setTrainingGoal] = useState('');
-  const [goals, setGoals] = useState<string[]>([]);
-  const [agreedToPolicy, setAgreedToPolicy] = useState(false);
+  const [name, setName] = useState(storedName ?? '');
+  const [email, setEmail] = useState(storedEmail ?? '');
+  const [age, setAge] = useState(storedAge ?? '25');
+  const [gender, setGender] = useState(storedGender ?? '');
+  const [trainingGoal, setTrainingGoal] = useState(storedTrainingGoal ?? '');
+  const [goals, setGoals] = useState<string[]>(storedGoals?.length ? storedGoals : []);
   const [errorMsg, setErrorMsg] = useState('');
 
   const emailRef = useRef<TextInput>(null);
@@ -94,15 +100,15 @@ export default function SignupScreen() {
       case 1: return age.trim().length > 0 && Number(age) >= 1 && Number(age) <= 120 && gender !== '';
       case 2: return trainingGoal !== '';
       case 3: return goals.length > 0;
-      case 4: return agreedToPolicy;
+      case 4: return true;
       default: return false;
     }
-  }, [step, name, email, age, gender, trainingGoal, goals, agreedToPolicy]);
+  }, [step, name, email, age, gender, trainingGoal, goals]);
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BACKEND_URL}/api/signup`, {
-        method: 'POST',
+      const res = await fetch(`${BACKEND_URL}/api/profile/${userId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
@@ -111,29 +117,23 @@ export default function SignupScreen() {
           gender,
           trainingGoal,
           goals,
-          agreedToPolicy,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error((json as { error?: string }).error ?? 'Something went wrong');
       return json as { success: boolean; user: { id: string; email: string; name: string } };
     },
-    onSuccess: (data) => {
-      // Celebration sequence: three escalating bursts
+    onSuccess: () => {
+      updateSignupProfile({
+        userName: name.trim(),
+        userEmail: email.trim().toLowerCase(),
+        userAge: age,
+        userGender: gender,
+        userTrainingGoal: trainingGoal,
+        userGoals: goals,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 150);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 320);
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 500);
-      setTimeout(() => {
-        setSignedUp(data.user.id, data.user.email, {
-          userName: name.trim(),
-          userAge: age,
-          userGender: gender,
-          userTrainingGoal: trainingGoal,
-          userGoals: goals,
-        });
-        router.replace('/(tabs)');
-      }, 600);
+      setTimeout(() => router.back(), 300);
     },
     onError: (err: Error) => {
       setErrorMsg(err.message);
@@ -153,8 +153,12 @@ export default function SignupScreen() {
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStep(s => s - 1);
-    setErrorMsg('');
+    if (step === 0) {
+      router.back();
+    } else {
+      setStep(s => s - 1);
+      setErrorMsg('');
+    }
   };
 
   const toggleGoal = (id: string) => {
@@ -166,7 +170,6 @@ export default function SignupScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Subtle green glow at top */}
       <LinearGradient
         colors={['rgba(16,185,129,0.12)', 'transparent']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 280 }}
@@ -176,9 +179,9 @@ export default function SignupScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* ── Header ── */}
+        {/* Header */}
         <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 4 }}>
-          {step > 0 ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
             <Pressable
               onPress={handleBack}
               hitSlop={12}
@@ -187,14 +190,15 @@ export default function SignupScreen() {
                 backgroundColor: C.surface,
                 borderWidth: 1, borderColor: C.border,
                 alignItems: 'center', justifyContent: 'center',
-                marginBottom: 16,
               }}
             >
-              <ChevronLeft size={20} color={C.textSecondary} />
+              {step === 0 ? <X size={18} color={C.textSecondary} /> : <ChevronLeft size={20} color={C.textSecondary} />}
             </Pressable>
-          ) : (
-            <View style={{ height: 56 }} />
-          )}
+            <Text style={{ flex: 1, textAlign: 'center', color: C.textMuted, fontSize: 13, fontWeight: '600', letterSpacing: 0.4 }}>
+              ACCOUNT SETTINGS
+            </Text>
+            <View style={{ width: 40 }} />
+          </View>
 
           {/* Progress bars */}
           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -202,9 +206,7 @@ export default function SignupScreen() {
               <View
                 key={i}
                 style={{
-                  height: 3,
-                  flex: 1,
-                  borderRadius: 2,
+                  height: 3, flex: 1, borderRadius: 2,
                   backgroundColor: i <= step ? C.green : C.border,
                 }}
               />
@@ -215,7 +217,6 @@ export default function SignupScreen() {
           </Text>
         </View>
 
-        {/* ── Scrollable content ── */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
@@ -224,12 +225,8 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Heading */}
           <View key={`heading-${step}`}>
-            <Text style={{
-              fontSize: 34, fontWeight: '800', color: C.textPrimary,
-              lineHeight: 42, marginTop: 20, marginBottom: 6,
-            }}>
+            <Text style={{ fontSize: 34, fontWeight: '800', color: C.textPrimary, lineHeight: 42, marginTop: 20, marginBottom: 6 }}>
               {heading.title}
             </Text>
             <Text style={{ fontSize: 15, color: C.textSecondary, lineHeight: 22, marginBottom: 32 }}>
@@ -237,10 +234,9 @@ export default function SignupScreen() {
             </Text>
           </View>
 
-          {/* Step body */}
           <View key={`body-${step}`}>
 
-            {/* ── Step 0: Name & Email ── */}
+            {/* Step 0: Name & Email */}
             {step === 0 && (
               <View style={card}>
                 <Text style={fieldLabel}>Full name</Text>
@@ -275,17 +271,14 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 1: Age & Gender ── */}
+            {/* Step 1: Age & Gender */}
             {step === 1 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
                   <Text style={fieldLabel}>Your age</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
                     <Pressable
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setAge(a => String(Math.max(1, Number(a || '1') - 1)));
-                      }}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAge(a => String(Math.max(1, Number(a || '1') - 1))); }}
                       style={stepperBtn}
                     >
                       <Text style={stepperTxt}>−</Text>
@@ -301,10 +294,7 @@ export default function SignupScreen() {
                       selectionColor={C.green}
                     />
                     <Pressable
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setAge(a => String(Math.min(120, Number(a || '0') + 1)));
-                      }}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAge(a => String(Math.min(120, Number(a || '0') + 1))); }}
                       style={stepperBtn}
                     >
                       <Text style={stepperTxt}>+</Text>
@@ -322,9 +312,7 @@ export default function SignupScreen() {
                           key={g.id}
                           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setGender(g.id); }}
                           style={{
-                            paddingHorizontal: 18,
-                            paddingVertical: 12,
-                            borderRadius: 12,
+                            paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12,
                             borderWidth: 1.5,
                             borderColor: sel ? C.green : C.border,
                             backgroundColor: sel ? C.greenDim : C.surfaceAlt,
@@ -341,7 +329,7 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 2: Training Goal ── */}
+            {/* Step 2: Training Goal */}
             {step === 2 && (
               <View style={{ gap: 10 }}>
                 {TRAINING_GOALS.map((tg) => {
@@ -349,16 +337,10 @@ export default function SignupScreen() {
                   return (
                     <Pressable
                       key={tg.id}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setTrainingGoal(tg.id);
-                      }}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTrainingGoal(tg.id); }}
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        padding: 16,
-                        borderRadius: 16,
-                        borderWidth: 1.5,
+                        flexDirection: 'row', alignItems: 'center', padding: 16,
+                        borderRadius: 16, borderWidth: 1.5,
                         borderColor: sel ? tg.color + '80' : C.border,
                         backgroundColor: sel ? tg.color + '15' : C.surface,
                       }}
@@ -369,8 +351,7 @@ export default function SignupScreen() {
                         <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{tg.desc}</Text>
                       </View>
                       <View style={{
-                        width: 26, height: 26, borderRadius: 13,
-                        borderWidth: 2,
+                        width: 26, height: 26, borderRadius: 13, borderWidth: 2,
                         borderColor: sel ? tg.color : C.borderAlt,
                         backgroundColor: sel ? tg.color : 'transparent',
                         alignItems: 'center', justifyContent: 'center',
@@ -383,53 +364,46 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 3: Goals ── */}
+            {/* Step 3: Health Goals */}
             {step === 3 && (
               <View style={{ gap: 10 }}>
-                {GOALS.map((goal, i) => {
+                {GOALS.map((goal) => {
                   const sel = goals.includes(goal.id);
                   return (
-                    <View
+                    <Pressable
                       key={goal.id}
+                      onPress={() => toggleGoal(goal.id)}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', padding: 16,
+                        borderRadius: 16, borderWidth: 1.5,
+                        borderColor: sel ? goal.color + '80' : C.border,
+                        backgroundColor: sel ? goal.color + '15' : C.surface,
+                      }}
                     >
-                      <Pressable
-                        onPress={() => toggleGoal(goal.id)}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          padding: 16,
-                          borderRadius: 16,
-                          borderWidth: 1.5,
-                          borderColor: sel ? goal.color + '80' : C.border,
-                          backgroundColor: sel ? goal.color + '15' : C.surface,
-                        }}
-                      >
-                        <Text style={{ fontSize: 26, marginRight: 14 }}>{goal.emoji}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: '700', fontSize: 15, color: C.textPrimary }}>{goal.label}</Text>
-                          <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{goal.desc}</Text>
-                        </View>
-                        <View style={{
-                          width: 26, height: 26, borderRadius: 13,
-                          borderWidth: 2,
-                          borderColor: sel ? goal.color : C.borderAlt,
-                          backgroundColor: sel ? goal.color : 'transparent',
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {sel && <Check size={14} color="white" />}
-                        </View>
-                      </Pressable>
-                    </View>
+                      <Text style={{ fontSize: 26, marginRight: 14 }}>{goal.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: '700', fontSize: 15, color: C.textPrimary }}>{goal.label}</Text>
+                        <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{goal.desc}</Text>
+                      </View>
+                      <View style={{
+                        width: 26, height: 26, borderRadius: 13, borderWidth: 2,
+                        borderColor: sel ? goal.color : C.borderAlt,
+                        backgroundColor: sel ? goal.color : 'transparent',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {sel && <Check size={14} color="white" />}
+                      </View>
+                    </Pressable>
                   );
                 })}
               </View>
             )}
 
-            {/* ── Step 4: Review & Policy ── */}
+            {/* Step 4: Review */}
             {step === 4 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
-                  <Text style={[fieldLabel, { marginBottom: 16 }]}>Your details</Text>
+                  <Text style={[fieldLabel, { marginBottom: 16 }]}>Your updated details</Text>
                   <SummaryRow label="Name" value={name} />
                   <DividerLine />
                   <SummaryRow label="Email" value={email} />
@@ -448,34 +422,12 @@ export default function SignupScreen() {
                     value={goals.map(id => GOALS.find(g => g.id === id)?.label ?? id).join(', ')}
                   />
                 </View>
-
-                <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAgreedToPolicy(v => !v); }}
-                  style={[card, { flexDirection: 'row', alignItems: 'flex-start', gap: 14 }]}
-                >
-                  <View style={{
-                    width: 26, height: 26, borderRadius: 8, marginTop: 1,
-                    borderWidth: 2,
-                    borderColor: agreedToPolicy ? C.green : C.borderAlt,
-                    backgroundColor: agreedToPolicy ? C.green : 'transparent',
-                    alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    {agreedToPolicy && <Check size={14} color="white" />}
-                  </View>
-                  <Text style={{ flex: 1, fontSize: 14, color: C.textSecondary, lineHeight: 21 }}>
-                    I agree to the{' '}
-                    <Text style={{ color: C.green, fontWeight: '600' }}>Nutrient Nudge Privacy Policy</Text>
-                    {' '}and consent to my data being used to improve the app experience.
-                  </Text>
-                </Pressable>
               </View>
             )}
 
           </View>
         </ScrollView>
 
-        {/* Error */}
         {!!errorMsg && (
           <View style={{
             marginHorizontal: 20, marginBottom: 8,
@@ -487,7 +439,6 @@ export default function SignupScreen() {
           </View>
         )}
 
-        {/* ── Continue / Submit ── */}
         <View style={{
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 12,
@@ -506,30 +457,19 @@ export default function SignupScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{
-                paddingVertical: 17,
-                borderRadius: 16,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-                borderWidth: isStepValid ? 0 : 1,
-                borderColor: C.border,
+                paddingVertical: 17, borderRadius: 16,
+                alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
+                borderWidth: isStepValid ? 0 : 1, borderColor: C.border,
               }}
             >
               {mutation.isPending ? (
                 <ActivityIndicator color="white" />
               ) : (
                 <>
-                  <Text style={{
-                    color: isStepValid ? 'white' : C.textMuted,
-                    fontWeight: '700',
-                    fontSize: 17,
-                  }}>
-                    {step < TOTAL_STEPS - 1 ? 'Continue' : 'Create Account'}
+                  <Text style={{ color: isStepValid ? 'white' : C.textMuted, fontWeight: '700', fontSize: 17 }}>
+                    {step < TOTAL_STEPS - 1 ? 'Continue' : 'Save Changes'}
                   </Text>
-                  {step < TOTAL_STEPS - 1 && isStepValid && (
-                    <ChevronRight size={18} color="white" />
-                  )}
+                  {step < TOTAL_STEPS - 1 && isStepValid && <ChevronRight size={18} color="white" />}
                 </>
               )}
             </LinearGradient>
@@ -556,47 +496,27 @@ function SummaryRow({ label: lbl, value }: { label: string; value: string }) {
 }
 
 const card: object = {
-  backgroundColor: C.surface,
-  borderRadius: 18,
-  padding: 18,
-  borderWidth: 1,
-  borderColor: C.border,
+  backgroundColor: C.surface, borderRadius: 18, padding: 18,
+  borderWidth: 1, borderColor: C.border,
 };
 
 const fieldLabel = {
-  fontSize: 11,
-  fontWeight: '700' as const,
-  color: C.textMuted,
-  textTransform: 'uppercase' as const,
-  letterSpacing: 0.8,
-  marginBottom: 8,
+  fontSize: 11, fontWeight: '700' as const, color: C.textMuted,
+  textTransform: 'uppercase' as const, letterSpacing: 0.8, marginBottom: 8,
 };
 
 const fieldInput = {
-  backgroundColor: C.surfaceAlt,
-  borderWidth: 1.5,
-  borderColor: C.borderAlt,
-  borderRadius: 12,
-  paddingHorizontal: 14,
-  paddingVertical: 14,
-  fontSize: 16,
-  color: C.textPrimary,
-  fontWeight: '500' as const,
+  backgroundColor: C.surfaceAlt, borderWidth: 1.5, borderColor: C.borderAlt,
+  borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+  fontSize: 16, color: C.textPrimary, fontWeight: '500' as const,
 };
 
 const stepperBtn: object = {
-  width: 52,
-  height: 52,
-  borderRadius: 14,
-  backgroundColor: C.surfaceAlt,
-  borderWidth: 1.5,
-  borderColor: C.border,
-  alignItems: 'center' as const,
-  justifyContent: 'center' as const,
+  width: 52, height: 52, borderRadius: 14,
+  backgroundColor: C.surfaceAlt, borderWidth: 1.5, borderColor: C.border,
+  alignItems: 'center' as const, justifyContent: 'center' as const,
 };
 
 const stepperTxt = {
-  fontSize: 24,
-  fontWeight: '500' as const,
-  color: C.textSecondary,
+  fontSize: 24, fontWeight: '500' as const, color: C.textSecondary,
 };
