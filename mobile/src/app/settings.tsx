@@ -8,13 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
 
@@ -82,6 +83,7 @@ export default function SettingsScreen() {
   const storedTrainingGoal = useUserStore(s => s.userTrainingGoal);
   const storedGoals = useUserStore(s => s.userGoals);
   const updateSignupProfile = useUserStore(s => s.updateSignupProfile);
+  const clearUser = useUserStore(s => s.clearUser);
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState(storedName ?? '');
@@ -91,6 +93,9 @@ export default function SettingsScreen() {
   const [trainingGoal, setTrainingGoal] = useState(storedTrainingGoal ?? '');
   const [goals, setGoals] = useState<string[]>(storedGoals?.length ? storedGoals : []);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const emailRef = useRef<TextInput>(null);
 
@@ -139,6 +144,24 @@ export default function SettingsScreen() {
       setErrorMsg(err.message);
     },
   });
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/account/${userId}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? 'Failed to delete account');
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clearUser();
+      router.replace('/signup');
+    } catch (e: unknown) {
+      setDeleteError(e instanceof Error ? e.message : 'Something went wrong');
+      setIsDeleting(false);
+    }
+  };
 
   const handleNext = () => {
     if (!isStepValid) return;
@@ -238,36 +261,65 @@ export default function SettingsScreen() {
 
             {/* Step 0: Name & Email */}
             {step === 0 && (
-              <View style={card}>
-                <Text style={fieldLabel}>Full name</Text>
-                <TextInput
-                  style={fieldInput}
-                  placeholder="e.g. Alex Johnson"
-                  placeholderTextColor={C.textMuted}
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  onSubmitEditing={() => emailRef.current?.focus()}
-                  blurOnSubmit={false}
-                  selectionColor={C.green}
-                />
-                <View style={{ height: 1, backgroundColor: C.border, marginVertical: 16 }} />
-                <Text style={fieldLabel}>Email address</Text>
-                <TextInput
-                  ref={emailRef}
-                  style={fieldInput}
-                  placeholder="you@example.com"
-                  placeholderTextColor={C.textMuted}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleNext}
-                  selectionColor={C.green}
-                />
+              <View style={{ gap: 14 }}>
+                <View style={card}>
+                  <Text style={fieldLabel}>Full name</Text>
+                  <TextInput
+                    style={fieldInput}
+                    placeholder="e.g. Alex Johnson"
+                    placeholderTextColor={C.textMuted}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()}
+                    blurOnSubmit={false}
+                    selectionColor={C.green}
+                  />
+                  <View style={{ height: 1, backgroundColor: C.border, marginVertical: 16 }} />
+                  <Text style={fieldLabel}>Email address</Text>
+                  <TextInput
+                    ref={emailRef}
+                    style={fieldInput}
+                    placeholder="you@example.com"
+                    placeholderTextColor={C.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleNext}
+                    selectionColor={C.green}
+                  />
+                </View>
+
+                {/* Danger Zone */}
+                <View style={{
+                  borderRadius: 18, borderWidth: 1,
+                  borderColor: 'rgba(239,68,68,0.25)',
+                  backgroundColor: 'rgba(239,68,68,0.06)',
+                  padding: 18,
+                }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#EF4444', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+                    Danger Zone
+                  </Text>
+                  <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 19, marginBottom: 14 }}>
+                    Permanently delete your account and all associated data. This action cannot be undone.
+                  </Text>
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowDeleteModal(true); }}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, paddingVertical: 13, borderRadius: 12,
+                      borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.4)',
+                      backgroundColor: 'rgba(239,68,68,0.1)',
+                    }}
+                  >
+                    <Trash2 size={16} color="#EF4444" />
+                    <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 15 }}>Delete Account</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
@@ -476,6 +528,69 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.75)' }}>
+          <View style={{
+            backgroundColor: C.surface, borderRadius: 24, padding: 24,
+            marginHorizontal: 24, width: '100%', maxWidth: 360,
+            borderWidth: 1, borderColor: C.border,
+          }}>
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <View style={{
+                width: 60, height: 60, borderRadius: 30,
+                backgroundColor: 'rgba(239,68,68,0.15)',
+                alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+              }}>
+                <Trash2 size={28} color="#EF4444" />
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: C.textPrimary, textAlign: 'center', marginBottom: 8 }}>
+                Delete Account?
+              </Text>
+              <Text style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', lineHeight: 21 }}>
+                This will permanently delete your account and all your data. This action cannot be undone.
+              </Text>
+            </View>
+
+            {deleteError && (
+              <View style={{
+                backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 12,
+                borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+                padding: 12, marginBottom: 16,
+              }}>
+                <Text style={{ color: '#F87171', fontSize: 13, textAlign: 'center' }}>{deleteError}</Text>
+              </View>
+            )}
+
+            <Pressable
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+              style={{
+                backgroundColor: '#EF4444', borderRadius: 14,
+                paddingVertical: 16, alignItems: 'center', marginBottom: 10,
+              }}
+            >
+              {isDeleting
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={{ color: 'white', fontWeight: '700', fontSize: 16 }}>Yes, Delete My Account</Text>
+              }
+            </Pressable>
+
+            <Pressable
+              onPress={() => { setShowDeleteModal(false); setDeleteError(null); }}
+              disabled={isDeleting}
+              style={{
+                backgroundColor: C.surfaceAlt, borderRadius: 14,
+                paddingVertical: 16, alignItems: 'center',
+                borderWidth: 1, borderColor: C.border,
+              }}
+            >
+              <Text style={{ color: C.textSecondary, fontWeight: '600', fontSize: 16 }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
