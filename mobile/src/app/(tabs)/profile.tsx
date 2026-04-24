@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2 } from 'lucide-react-native';
+import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore, calculateTDEE, calculateTargetCalories } from '@/lib/state/nutrition-store';
@@ -373,8 +373,16 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Profile Summary */}
-          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">Your Profile</Text>
+          {/* Profile Summary Header */}
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-bold text-gray-900 dark:text-white">Your Profile</Text>
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/settings'); }}
+              className="w-10 h-10 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 items-center justify-center"
+            >
+              <Settings size={18} color="#10B981" />
+            </Pressable>
+          </View>
           <View className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden mb-4">
             <View className="flex-row items-center p-4 border-b border-gray-100 dark:border-gray-800">
               <User size={20} color="#10B981" />
