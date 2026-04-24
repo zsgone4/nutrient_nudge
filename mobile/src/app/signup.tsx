@@ -36,6 +36,16 @@ const C = {
   greenDimBorder: 'rgba(16,185,129,0.35)',
 };
 
+const TRAINING_GOALS = [
+  { id: 'longevity', label: 'Longevity', emoji: '🌿', desc: 'Live longer, feel younger', color: '#10B981' },
+  { id: 'fat-loss', label: 'Fat Loss', emoji: '🔥', desc: 'Burn fat, stay lean', color: '#F97316' },
+  { id: 'build-muscle', label: 'Build Muscle', emoji: '💪', desc: 'Strength & size gains', color: '#3B82F6' },
+  { id: 'mobility', label: 'Mobility & Functionality', emoji: '🤸', desc: 'Move better, feel free', color: '#A855F7' },
+  { id: 'mental-health', label: 'Mental Health & Stress Relief', emoji: '🧠', desc: 'Calm, clarity & resilience', color: '#06B6D4' },
+  { id: 'hybrid-athlete', label: 'Hybrid Athlete (Hyrox)', emoji: '⚡', desc: 'Strength meets endurance', color: '#F59E0B' },
+  { id: 'endurance', label: 'Endurance (Marathon)', emoji: '🏃', desc: 'Go the distance', color: '#EF4444' },
+];
+
 const GOALS = [
   { id: 'sleep', label: 'Improve Sleep', emoji: '🌙', desc: 'Better rest & recovery', color: '#8B5CF6' },
   { id: 'recover-perform', label: 'Recover & Perform', emoji: '⚡', desc: 'Athletic performance', color: '#F59E0B' },
@@ -51,11 +61,12 @@ const GENDERS = [
   { id: 'prefer-not-to-say', label: 'Prefer not to say' },
 ];
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 const STEP_HEADINGS = [
   { title: 'Welcome to\nNutrient Nudge 🌿', sub: "Tell us about yourself so we can personalise your experience." },
   { title: 'About you', sub: 'This helps us understand your nutritional needs.' },
+  { title: "What are you\ntraining for? 🎯", sub: "Pick your main focus — we'll build your plan around it." },
   { title: 'Your health goals', sub: "Select all that apply — we'll tailor your recommendations." },
   { title: "Almost there! 🎉", sub: 'Review your details before getting started.' },
 ];
@@ -70,6 +81,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [age, setAge] = useState('25');
   const [gender, setGender] = useState('');
+  const [trainingGoal, setTrainingGoal] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -80,11 +92,12 @@ export default function SignupScreen() {
     switch (step) {
       case 0: return name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
       case 1: return age.trim().length > 0 && Number(age) >= 1 && Number(age) <= 120 && gender !== '';
-      case 2: return goals.length > 0;
-      case 3: return agreedToPolicy;
+      case 2: return trainingGoal !== '';
+      case 3: return goals.length > 0;
+      case 4: return agreedToPolicy;
       default: return false;
     }
-  }, [step, name, email, age, gender, goals, agreedToPolicy]);
+  }, [step, name, email, age, gender, trainingGoal, goals, agreedToPolicy]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -96,6 +109,7 @@ export default function SignupScreen() {
           email: email.trim().toLowerCase(),
           age: Number(age),
           gender,
+          trainingGoal,
           goals,
           agreedToPolicy,
         }),
@@ -321,8 +335,50 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 2: Goals ── */}
+            {/* ── Step 2: Training Goal ── */}
             {step === 2 && (
+              <View style={{ gap: 10 }}>
+                {TRAINING_GOALS.map((tg) => {
+                  const sel = trainingGoal === tg.id;
+                  return (
+                    <Pressable
+                      key={tg.id}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setTrainingGoal(tg.id);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: 16,
+                        borderRadius: 16,
+                        borderWidth: 1.5,
+                        borderColor: sel ? tg.color + '80' : C.border,
+                        backgroundColor: sel ? tg.color + '15' : C.surface,
+                      }}
+                    >
+                      <Text style={{ fontSize: 26, marginRight: 14 }}>{tg.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: '700', fontSize: 15, color: C.textPrimary }}>{tg.label}</Text>
+                        <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{tg.desc}</Text>
+                      </View>
+                      <View style={{
+                        width: 26, height: 26, borderRadius: 13,
+                        borderWidth: 2,
+                        borderColor: sel ? tg.color : C.borderAlt,
+                        backgroundColor: sel ? tg.color : 'transparent',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {sel && <Check size={14} color="white" />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* ── Step 3: Goals ── */}
+            {step === 3 && (
               <View style={{ gap: 10 }}>
                 {GOALS.map((goal, i) => {
                   const sel = goals.includes(goal.id);
@@ -363,8 +419,8 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 3: Review & Policy ── */}
-            {step === 3 && (
+            {/* ── Step 4: Review & Policy ── */}
+            {step === 4 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
                   <Text style={[fieldLabel, { marginBottom: 16 }]}>Your details</Text>
@@ -375,6 +431,11 @@ export default function SignupScreen() {
                   <SummaryRow label="Age" value={`${age} years old`} />
                   <DividerLine />
                   <SummaryRow label="Gender" value={GENDERS.find(g => g.id === gender)?.label ?? gender} />
+                  <DividerLine />
+                  <SummaryRow
+                    label="Training"
+                    value={(() => { const t = TRAINING_GOALS.find(t => t.id === trainingGoal); return t ? `${t.emoji} ${t.label}` : trainingGoal; })()}
+                  />
                   <DividerLine />
                   <SummaryRow
                     label="Goals"
