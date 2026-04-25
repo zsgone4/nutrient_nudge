@@ -5,9 +5,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// PostgreSQL for production/cloud
+// SQLite for local development, PostgreSQL for production/cloud
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -23,6 +23,7 @@ model Signup {
   createdAt        DateTime       @default(now())
   userProfile      UserProfile?
   foodLogEntries   FoodLogEntry[]
+  nutrientScores   NutrientScore[]
 }
 
 model UserProfile {
@@ -99,4 +100,16 @@ model FoodLogEntry {
   date             String   // YYYY-MM-DD format
   timestamp        BigInt
   createdAt        DateTime @default(now())
+}
+
+model NutrientScore {
+  id               String   @id @default(cuid())
+  userId           String
+  user             Signup   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String   // YYYY-MM-DD format
+  score            Float    // 0-100 score based on micronutrient completeness
+  micronutrients   String   // JSON string with detailed breakdown of micronutrient coverage
+  createdAt        DateTime @default(now())
+  
+  @@unique([userId, date])
 }
