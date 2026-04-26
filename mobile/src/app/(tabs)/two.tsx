@@ -268,7 +268,7 @@ export default function MicronutrientsScreen() {
         >
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-              Micronutrient Score
+              Daily Score
             </Text>
             <Pressable
               onPress={() => {

@@ -46,7 +46,7 @@ export default function ProfileScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clearUser();
-      router.replace('/signup');
+      router.replace('/account-deleted');
     } catch (e: any) {
       setDeleteError(e.message ?? 'Something went wrong');
       setIsDeleting(false);

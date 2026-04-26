@@ -31,22 +31,22 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
+        name="two"
+        options={{
+          title: 'Score',
+          headerTitle: 'Score',
+          tabBarIcon: ({ color, focused }) => (
+            <Pill size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Home size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Micros',
-          headerTitle: 'Micronutrients',
-          tabBarIcon: ({ color, focused }) => (
-            <Pill size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
