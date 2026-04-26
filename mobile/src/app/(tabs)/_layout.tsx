@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Pill, User } from 'lucide-react-native';
+import { Home, Gauge, User } from 'lucide-react-native';
 import { useColorScheme } from '@/lib/useColorScheme';
 
 export default function TabLayout() {
@@ -36,7 +36,7 @@ export default function TabLayout() {
           title: 'Score',
           headerTitle: 'Score',
           tabBarIcon: ({ color, focused }) => (
-            <Pill size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <Gauge size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />

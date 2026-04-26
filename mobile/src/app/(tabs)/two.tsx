@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2 } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -442,6 +442,36 @@ export default function MicronutrientsScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* How the score is calculated */}
+        <View className="mx-4 mt-3 bg-white dark:bg-gray-900 rounded-xl p-4">
+          <View className="flex-row items-center mb-3">
+            <View className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center mr-3">
+              <Calculator size={16} color="#10B981" />
+            </View>
+            <Text className="text-sm font-semibold text-gray-900 dark:text-white">How your score is calculated</Text>
+          </View>
+
+          <Text className="text-xs text-gray-600 dark:text-gray-400 leading-5 mb-3">
+            Your score is the <Text className="font-semibold text-gray-800 dark:text-gray-200">average percentage of recommended daily values (RDVs)</Text> met across all 25 tracked vitamins and minerals — capped at 100% per nutrient so over-consuming one can't inflate the result.
+          </Text>
+
+          <View className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 mb-3">
+            <Text className="text-xs text-gray-500 dark:text-gray-400 font-medium text-center">
+              Score = (sum of each nutrient % of RDV, max 100%) ÷ 25
+            </Text>
+          </View>
+
+          <Text className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Are some nutrients weighted more than others?</Text>
+          <Text className="text-xs text-gray-600 dark:text-gray-400 leading-5 mb-3">
+            No — every vitamin and mineral counts equally. This keeps the score honest and transparent: a score of 75 means you have consistently hit 75% of your targets across the board, with no hidden bias.
+          </Text>
+
+          <Text className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Why equal weighting?</Text>
+          <Text className="text-xs text-gray-600 dark:text-gray-400 leading-5">
+            While certain nutrients like vitamin D, magnesium, and iron are commonly deficient, there is no scientific consensus on a universal ranking — individual needs vary widely by age, sex, activity level, and health goals. Equal weighting gives you a clear, unbiased snapshot of your overall micronutrient coverage.
+          </Text>
         </View>
 
         {/* Sources & Citations */}
