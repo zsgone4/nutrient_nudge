@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients } from '@/lib/types/nutrition';
+import { useColorScheme } from '@/lib/useColorScheme';
 
 const CATEGORY_ICONS: Record<FoodCategory, React.ReactNode> = {
   fruits: <Apple size={20} color="#10B981" />,
@@ -94,6 +95,8 @@ async function fetchProductByBarcode(barcode: string): Promise<Food | null> {
 export default function AddFoodScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams<{ mealType?: string; foodId?: string }>();
 
   const mealType = (params.mealType as MealType) || 'snacks';
@@ -428,75 +431,88 @@ export default function AddFoodScreen() {
         visible={showBarcodeModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowBarcodeModal(false)}
+        onRequestClose={() => { setShowBarcodeModal(false); Keyboard.dismiss(); }}
       >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
-          onPress={() => { setShowBarcodeModal(false); Keyboard.dismiss(); }}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
           <Pressable
-            onPress={() => {}}
-            className="bg-white dark:bg-gray-900 rounded-t-3xl px-6 pt-6"
-            style={{ paddingBottom: insets.bottom + 24 }}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+            onPress={() => { setShowBarcodeModal(false); Keyboard.dismiss(); }}
           >
-            {/* Handle */}
-            <View className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full self-center mb-5" />
-
-            <View className="flex-row items-center mb-2">
-              <View className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center mr-3">
-                <ScanBarcode size={22} color="#10B981" />
-              </View>
-              <View>
-                <Text className="text-lg font-bold text-gray-900 dark:text-white">Barcode Lookup</Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">Enter the barcode number from your product</Text>
-              </View>
-            </View>
-
-            <View className="mt-5 mb-3 flex-row items-center bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-4">
-              <TextInput
-                className="flex-1 text-lg text-gray-900 dark:text-white font-medium tracking-widest"
-                placeholder="e.g. 5000112637922"
-                placeholderTextColor="#9CA3AF"
-                value={barcodeInput}
-                onChangeText={text => { setBarcodeInput(text.replace(/\D/g, '')); setBarcodeError(null); }}
-                keyboardType="number-pad"
-                maxLength={14}
-                autoFocus
-                returnKeyType="search"
-                onSubmitEditing={handleBarcodeLookup}
-              />
-              {barcodeInput.length > 0 && (
-                <Pressable onPress={() => { setBarcodeInput(''); setBarcodeError(null); }}>
-                  <X size={20} color="#9CA3AF" />
-                </Pressable>
-              )}
-            </View>
-
-            {barcodeError && (
-              <View className="flex-row items-center mb-3 px-1">
-                <AlertCircle size={15} color="#EF4444" />
-                <Text className="text-red-500 text-sm ml-1.5">{barcodeError}</Text>
-              </View>
-            )}
-
-            <Text className="text-xs text-gray-400 dark:text-gray-500 text-center mb-5">
-              Find the barcode on the product packaging (EAN-13 / UPC)
-            </Text>
-
             <Pressable
-              onPress={handleBarcodeLookup}
-              disabled={isFetching || barcodeInput.length < 8}
-              className="bg-emerald-500 rounded-2xl py-4 items-center active:opacity-80"
-              style={{ opacity: barcodeInput.length < 8 ? 0.5 : 1 }}
+              onPress={() => {}}
+              className="bg-white dark:bg-gray-900 rounded-t-3xl px-6 pt-5"
+              style={{ paddingBottom: insets.bottom + 20 }}
             >
-              {isFetching ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white font-bold text-base">Look Up Product</Text>
+              {/* Handle */}
+              <View className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full self-center mb-5" />
+
+              <View className="flex-row items-center mb-5">
+                <View className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center mr-3">
+                  <ScanBarcode size={22} color="#10B981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-gray-900 dark:text-white">Barcode Lookup</Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">Enter the number from the product packaging</Text>
+                </View>
+              </View>
+
+              {/* Large prominent input */}
+              <View className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-5 mb-2">
+                <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                  Barcode number (EAN-13 / UPC)
+                </Text>
+                <View className="flex-row items-center">
+                  <TextInput
+                    style={{ flex: 1, fontSize: 28, fontWeight: '700', letterSpacing: 3, color: isDark ? '#F9FAFB' : '#111827' }}
+                    placeholder="0000000000000"
+                    placeholderTextColor="#D1D5DB"
+                    value={barcodeInput}
+                    onChangeText={text => { setBarcodeInput(text.replace(/\D/g, '')); setBarcodeError(null); }}
+                    keyboardType="number-pad"
+                    maxLength={14}
+                    autoFocus
+                    returnKeyType="search"
+                    onSubmitEditing={handleBarcodeLookup}
+                  />
+                  {barcodeInput.length > 0 && (
+                    <Pressable
+                      onPress={() => { setBarcodeInput(''); setBarcodeError(null); }}
+                      className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 items-center justify-center"
+                    >
+                      <X size={16} color="#6B7280" />
+                    </Pressable>
+                  )}
+                </View>
+                <Text className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  {barcodeInput.length} / 13 digits
+                </Text>
+              </View>
+
+              {barcodeError && (
+                <View className="flex-row items-center mb-3 px-1">
+                  <AlertCircle size={15} color="#EF4444" />
+                  <Text className="text-red-500 text-sm ml-1.5 flex-1">{barcodeError}</Text>
+                </View>
               )}
+
+              <Pressable
+                onPress={handleBarcodeLookup}
+                disabled={isFetching || barcodeInput.length < 8}
+                className="bg-emerald-500 rounded-2xl py-4 items-center mt-2 active:opacity-80"
+                style={{ opacity: barcodeInput.length < 8 ? 0.45 : 1 }}
+              >
+                {isFetching ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white font-bold text-base">Look Up Product</Text>
+                )}
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
