@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
-import { KeyboardToolbar } from 'react-native-keyboard-controller';
+import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, InputAccessoryView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle } from 'lucide-react-native';
@@ -154,6 +153,21 @@ async function searchFoodsAPI(query: string): Promise<Food[]> {
     return [];
   }
 }
+
+const styles = StyleSheet.create({
+  doneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#C6C6C8',
+    paddingHorizontal: 16,
+    height: 44,
+  },
+  doneButton: { paddingHorizontal: 8, paddingVertical: 6 },
+  doneText: { color: '#007AFF', fontSize: 17, fontWeight: '600' as const },
+});
 
 export default function AddFoodScreen() {
   const insets = useSafeAreaInsets();
@@ -340,6 +354,7 @@ export default function AddFoodScreen() {
                   onBlur={handleGramInputBlur}
                   keyboardType="decimal-pad"
                   selectTextOnFocus
+                  inputAccessoryViewID={Platform.OS === 'ios' ? 'gramDone' : undefined}
                   style={{
                     fontSize: 40,
                     fontWeight: '700',
@@ -448,7 +463,15 @@ export default function AddFoodScreen() {
             </Text>
           </Pressable>
         </View>
-        <KeyboardToolbar showArrows={false} doneText="Done" />
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID="gramDone">
+            <View style={styles.doneBar}>
+              <Pressable onPress={() => Keyboard.dismiss()} style={styles.doneButton}>
+                <Text style={styles.doneText}>Done</Text>
+              </Pressable>
+            </View>
+          </InputAccessoryView>
+        )}
       </View>
     );
   }
@@ -547,7 +570,15 @@ export default function AddFoodScreen() {
         }
       />
 
-      <KeyboardToolbar showArrows={false} doneText="Done" />
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="barcodeDone">
+          <View style={styles.doneBar}>
+            <Pressable onPress={() => Keyboard.dismiss()} style={styles.doneButton}>
+              <Text style={styles.doneText}>Done</Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      )}
 
       {/* Barcode Lookup Modal */}
       <Modal
