@@ -68,6 +68,36 @@ export default function ProfileScreen() {
     setShowMacroModal(true);
   };
 
+  const handleCaloriesChange = (value: string) => {
+    setCustomCalories(value);
+    const newCal = parseInt(value);
+    if (!newCal || newCal <= 0) return;
+    const p = parseInt(customProtein) || 0;
+    const c = parseInt(customCarbs) || 0;
+    const f = parseInt(customFat) || 0;
+    const currentCal = p * 4 + c * 4 + f * 9;
+    if (currentCal > 0) {
+      const scale = newCal / currentCal;
+      setCustomProtein(Math.round(p * scale).toString());
+      setCustomCarbs(Math.round(c * scale).toString());
+      setCustomFat(Math.round(f * scale).toString());
+    } else {
+      setCustomProtein(Math.round(newCal * 0.30 / 4).toString());
+      setCustomCarbs(Math.round(newCal * 0.40 / 4).toString());
+      setCustomFat(Math.round(newCal * 0.30 / 9).toString());
+    }
+  };
+
+  const handleMacroChange = (field: 'protein' | 'carbs' | 'fat', value: string) => {
+    const p = field === 'protein' ? parseInt(value) || 0 : parseInt(customProtein) || 0;
+    const c = field === 'carbs' ? parseInt(value) || 0 : parseInt(customCarbs) || 0;
+    const f = field === 'fat' ? parseInt(value) || 0 : parseInt(customFat) || 0;
+    setCustomCalories((p * 4 + c * 4 + f * 9).toString());
+    if (field === 'protein') setCustomProtein(value);
+    else if (field === 'carbs') setCustomCarbs(value);
+    else setCustomFat(value);
+  };
+
   const handleSaveMacroGoals = () => {
     const calories = parseInt(customCalories) || dailyGoals.macros.calories;
     const protein = parseInt(customProtein) || dailyGoals.macros.protein;
@@ -585,16 +615,16 @@ export default function ProfileScreen() {
             </View>
 
             {[
-              { label: 'Calories', unit: 'kcal', value: customCalories, setter: setCustomCalories },
-              { label: 'Protein', unit: 'g', value: customProtein, setter: setCustomProtein },
-              { label: 'Carbs', unit: 'g', value: customCarbs, setter: setCustomCarbs },
-              { label: 'Fat', unit: 'g', value: customFat, setter: setCustomFat },
-            ].map(({ label, unit, value, setter }) => (
+              { label: 'Calories', unit: 'kcal', value: customCalories, onChange: handleCaloriesChange },
+              { label: 'Protein', unit: 'g', value: customProtein, onChange: (v: string) => handleMacroChange('protein', v) },
+              { label: 'Carbs', unit: 'g', value: customCarbs, onChange: (v: string) => handleMacroChange('carbs', v) },
+              { label: 'Fat', unit: 'g', value: customFat, onChange: (v: string) => handleMacroChange('fat', v) },
+            ].map(({ label, unit, value, onChange }) => (
               <View key={label} className="flex-row items-center bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-3">
                 <Text className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Text>
                 <TextInput
                   value={value}
-                  onChangeText={setter}
+                  onChangeText={onChange}
                   keyboardType="number-pad"
                   selectTextOnFocus
                   className="text-base font-semibold text-gray-900 dark:text-white text-right mr-1"
@@ -603,6 +633,9 @@ export default function ProfileScreen() {
                 <Text className="text-sm text-gray-400">{unit}</Text>
               </View>
             ))}
+            <Text className="text-xs text-gray-400 text-center mb-1">
+              Editing calories scales macros · editing macros updates calories
+            </Text>
 
             <Pressable
               onPress={() => { Keyboard.dismiss(); handleSaveMacroGoals(); }}
