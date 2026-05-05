@@ -165,12 +165,13 @@ foodLogsRouter.get("/user/:userId", async (c) => {
     }
 
     const multiplier = entry.servings;
-    dailyTotals[entry.date].calories += entry.food.calories * multiplier;
-    dailyTotals[entry.date].protein += entry.food.protein * multiplier;
-    dailyTotals[entry.date].carbohydrates += entry.food.carbohydrates * multiplier;
-    dailyTotals[entry.date].fat += entry.food.fat * multiplier;
-    dailyTotals[entry.date].fiber += entry.food.fiber * multiplier;
-    dailyTotals[entry.date].sugar += entry.food.sugar * multiplier;
+    const day = dailyTotals[entry.date]!;
+    day.calories += entry.food.calories * multiplier;
+    day.protein += entry.food.protein * multiplier;
+    day.carbohydrates += entry.food.carbohydrates * multiplier;
+    day.fat += entry.food.fat * multiplier;
+    day.fiber += entry.food.fiber * multiplier;
+    day.sugar += entry.food.sugar * multiplier;
   });
 
   return c.json({

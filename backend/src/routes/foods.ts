@@ -50,8 +50,8 @@ foodsRouter.get("/search", async (c) => {
     where: {
       ...(query && {
         OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { brand: { contains: query, mode: "insensitive" } },
+          { name: { contains: query } },
+          { brand: { contains: query } },
         ],
       }),
       ...(category && { category }),

@@ -76,7 +76,7 @@ nutrientScoreRouter.post(
       MICRONUTRIENTS.forEach((nutrient) => {
         const fieldName = nutrient as keyof typeof food;
         const value = (food[fieldName] as number) || 0;
-        aggregated[nutrient] += value * servingMultiplier;
+        aggregated[nutrient] = (aggregated[nutrient] ?? 0) + value * servingMultiplier;
       });
     });
 
@@ -85,9 +85,9 @@ nutrientScoreRouter.post(
     let totalCoverage = 0;
 
     MICRONUTRIENTS.forEach((nutrient) => {
-      const dailyValue = DAILY_VALUES[nutrient];
-      const consumed = aggregated[nutrient] ?? 0;
-      const percentageCoverage = dailyValue > 0 ? Math.min((consumed / dailyValue) * 100, 100) : 0;
+      const dv: number = DAILY_VALUES[nutrient] ?? 0;
+      const consumed: number = aggregated[nutrient] ?? 0;
+      const percentageCoverage = dv > 0 ? Math.min((consumed / dv) * 100, 100) : 0;
       coverage[nutrient] = percentageCoverage;
       totalCoverage += percentageCoverage;
     });

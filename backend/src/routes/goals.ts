@@ -63,14 +63,14 @@ function calculateBMR(profile: any): number {
 // Calculate TDEE (Total Daily Energy Expenditure)
 function calculateTDEE(profile: any): number {
   const bmr = calculateBMR(profile);
-  const activityMultiplier = ACTIVITY_MULTIPLIERS[profile.userProfile?.activityLevel || "moderate"];
+  const activityMultiplier = ACTIVITY_MULTIPLIERS[profile.userProfile?.activityLevel || "moderate"] ?? 1.55;
   return Math.round(bmr * activityMultiplier);
 }
 
 // Calculate target calories based on goal
 function calculateTargetCalories(profile: any): number {
   const tdee = calculateTDEE(profile);
-  const adjustment = GOAL_ADJUSTMENTS[profile.userProfile?.goal || "maintain"];
+  const adjustment = GOAL_ADJUSTMENTS[profile.userProfile?.goal || "maintain"] ?? 0;
   return Math.round(tdee * (1 + adjustment));
 }
 
