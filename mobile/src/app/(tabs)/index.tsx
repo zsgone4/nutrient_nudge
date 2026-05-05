@@ -43,6 +43,12 @@ export default function DashboardScreen() {
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
+  const calorieGoal = useNutritionStore(s => s.dailyGoals.macros.calories);
+  const proteinGoal = useNutritionStore(s => s.dailyGoals.macros.protein);
+  const carbsGoal = useNutritionStore(s => s.dailyGoals.macros.carbohydrates);
+  const fatGoal = useNutritionStore(s => s.dailyGoals.macros.fat);
+  const fiberGoal = useNutritionStore(s => s.dailyGoals.macros.fiber);
+  const sugarGoal = useNutritionStore(s => s.dailyGoals.macros.sugar);
   const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
 
   const [zachMessage, setZachMessage] = useState<string | null>(null);
@@ -101,8 +107,8 @@ export default function DashboardScreen() {
     fetchZachInsight(entries, totals);
   };
 
-  const calorieProgress = dailyGoals.macros.calories > 0
-    ? totals.macros.calories / dailyGoals.macros.calories
+  const calorieProgress = calorieGoal > 0
+    ? totals.macros.calories / calorieGoal
     : 0;
 
   const getMealCalories = (mealType: MealType) =>
@@ -147,7 +153,7 @@ export default function DashboardScreen() {
               backgroundColor="rgba(255,255,255,0.25)"
             >
               <Text className="text-3xl font-bold text-white">{Math.round(totals.macros.calories)}</Text>
-              <Text className="text-white/70 text-sm">of {dailyGoals.macros.calories}</Text>
+              <Text className="text-white/70 text-sm">of {calorieGoal}</Text>
             </CircularProgress>
             <Text className="text-white font-medium mt-2">Calories</Text>
           </View>
@@ -159,7 +165,7 @@ export default function DashboardScreen() {
                 <Text className="text-white/80 text-sm">{Math.round(totals.macros.carbohydrates)}g</Text>
               </View>
               <View className="h-2 bg-white/25 rounded-full">
-                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.carbohydrates / (dailyGoals.macros.carbohydrates || 1)) * 100, 100)}%` }} />
+                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.carbohydrates / (carbsGoal || 1)) * 100, 100)}%` }} />
               </View>
             </View>
             <View className="mb-3">
@@ -168,7 +174,7 @@ export default function DashboardScreen() {
                 <Text className="text-white/80 text-sm">{Math.round(totals.macros.protein)}g</Text>
               </View>
               <View className="h-2 bg-white/25 rounded-full">
-                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.protein / (dailyGoals.macros.protein || 1)) * 100, 100)}%` }} />
+                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.protein / (proteinGoal || 1)) * 100, 100)}%` }} />
               </View>
             </View>
             <View>
@@ -177,7 +183,7 @@ export default function DashboardScreen() {
                 <Text className="text-white/80 text-sm">{Math.round(totals.macros.fat)}g</Text>
               </View>
               <View className="h-2 bg-white/25 rounded-full">
-                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.fat / (dailyGoals.macros.fat || 1)) * 100, 100)}%` }} />
+                <View className="h-2 bg-white rounded-full" style={{ width: `${Math.min((totals.macros.fat / (fatGoal || 1)) * 100, 100)}%` }} />
               </View>
             </View>
           </View>
@@ -335,8 +341,8 @@ export default function DashboardScreen() {
         <View className="mt-4">
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">Detailed Macros</Text>
           <View className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm">
-            <MacroBar label="Fiber" current={totals.macros.fiber} goal={dailyGoals.macros.fiber} color="#10B981" />
-            <MacroBar label="Sugar" current={totals.macros.sugar} goal={dailyGoals.macros.sugar} color="#F59E0B" />
+            <MacroBar label="Fiber" current={totals.macros.fiber} goal={fiberGoal} color="#10B981" />
+            <MacroBar label="Sugar" current={totals.macros.sugar} goal={sugarGoal} color="#F59E0B" />
           </View>
         </View>
       </ScrollView>
