@@ -12,6 +12,7 @@ import { userProfileRouter } from "./routes/userProfile";
 import { goalsRouter } from "./routes/goals";
 import { nutrientScoreRouter } from "./routes/nutrientScore";
 import { dashboardRouter } from "./routes/dashboard";
+import { aiRouter } from "./routes/ai";
 
 const app = new Hono();
 
@@ -52,6 +53,7 @@ app.route("/api/user-profile", userProfileRouter);
 app.route("/api/goals", goalsRouter);
 app.route("/api/nutrient-score", nutrientScoreRouter);
 app.route("/api/dashboard", dashboardRouter);
+app.route("/api/ai", aiRouter);
 
 const port = Number(process.env.PORT) || 3000;
 

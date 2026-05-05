@@ -109,6 +109,9 @@ interface NutritionState {
     micros: Micronutrients;
   };
 
+  // Whether user has overridden the auto-calculated macros
+  macroGoalsOverridden: boolean;
+
   // User profile
   userProfile: UserProfile;
 
@@ -121,6 +124,8 @@ interface NutritionState {
   updateFoodEntry: (entryId: string, servings: number) => void;
   setSelectedDate: (date: string) => void;
   setDailyGoals: (goals: { macros: Macronutrients; micros: Micronutrients }) => void;
+  setCustomMacroGoals: (macros: Macronutrients) => void;
+  resetMacroGoals: () => void;
   setUserProfile: (profile: UserProfile) => void;
   recalculateGoals: () => void;
 
@@ -136,6 +141,7 @@ export const useNutritionStore = create<NutritionState>()(
     (set, get) => ({
       logs: {},
       dailyGoals: DAILY_VALUES,
+      macroGoalsOverridden: false,
       userProfile: defaultProfile,
       selectedDate: getTodayString(),
 
@@ -187,6 +193,21 @@ export const useNutritionStore = create<NutritionState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       setDailyGoals: (goals) => set({ dailyGoals: goals }),
+
+      setCustomMacroGoals: (macros) => set(state => ({
+        dailyGoals: { ...state.dailyGoals, macros },
+        macroGoalsOverridden: true,
+      })),
+
+      resetMacroGoals: () => {
+        const profile = get().userProfile;
+        const targetCalories = calculateTargetCalories(profile);
+        const macros = calculateMacros(targetCalories, profile);
+        set(state => ({
+          dailyGoals: { ...state.dailyGoals, macros },
+          macroGoalsOverridden: false,
+        }));
+      },
 
       setUserProfile: (profile) => {
         set({ userProfile: profile });
