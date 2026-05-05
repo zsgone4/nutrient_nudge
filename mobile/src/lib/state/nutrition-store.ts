@@ -216,6 +216,7 @@ export const useNutritionStore = create<NutritionState>()(
       },
 
       recalculateGoals: () => {
+        if (get().macroGoalsOverridden) return;
         const profile = get().userProfile;
         const targetCalories = calculateTargetCalories(profile);
         const macros = calculateMacros(targetCalories, profile);
@@ -223,7 +224,7 @@ export const useNutritionStore = create<NutritionState>()(
         set(state => ({
           dailyGoals: {
             macros,
-            micros: state.dailyGoals.micros, // Keep micro goals as default RDV
+            micros: state.dailyGoals.micros,
           },
         }));
       },
@@ -284,6 +285,7 @@ export const useNutritionStore = create<NutritionState>()(
         logs: state.logs,
         dailyGoals: state.dailyGoals,
         userProfile: state.userProfile,
+        macroGoalsOverridden: state.macroGoalsOverridden,
       }),
     }
   )

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +9,8 @@ import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
 const CATEGORY_ICONS: Record<FoodCategory, React.ReactNode> = {
   fruits: <Apple size={20} color="#10B981" />,
@@ -92,6 +94,66 @@ async function fetchProductByBarcode(barcode: string): Promise<Food | null> {
   }
 }
 
+async function saveFoodToBackend(food: Food): Promise<string | null> {
+  try {
+    const payload = {
+      name: food.name,
+      servingSize: food.servingSize,
+      servingUnit: food.servingUnit,
+      category: food.category,
+      calories: food.macros.calories,
+      protein: food.macros.protein,
+      carbohydrates: food.macros.carbohydrates,
+      fat: food.macros.fat,
+      fiber: food.macros.fiber,
+      sugar: food.macros.sugar,
+      ...food.micros,
+    };
+    const res = await fetch(`${BACKEND_URL}/api/foods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.food?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function searchFoodsAPI(query: string): Promise<Food[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/foods/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.foods ?? []).map((f: any): Food => ({
+      id: f.id,
+      name: f.name,
+      servingSize: Number(f.servingSize),
+      servingUnit: f.servingUnit,
+      category: f.category,
+      macros: {
+        calories: Number(f.calories),
+        protein: Number(f.protein),
+        carbohydrates: Number(f.carbohydrates),
+        fat: Number(f.fat),
+        fiber: Number(f.fiber ?? 0),
+        sugar: Number(f.sugar ?? 0),
+      },
+      micros: {
+        vitaminA: 0, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0,
+        vitaminB6: 0, vitaminB7: 0, vitaminB9: 0, vitaminB12: 0, vitaminC: 0,
+        vitaminD: 0, vitaminE: 0, vitaminK: 0, calcium: 0, iron: 0, magnesium: 0,
+        phosphorus: 0, potassium: 0, sodium: 0, zinc: 0, copper: 0, manganese: 0,
+        selenium: 0, chromium: 0, iodine: 0,
+      },
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default function AddFoodScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -107,6 +169,7 @@ export default function AddFoodScreen() {
     preselectedFoodId ? FOOD_DATABASE.find(f => f.id === preselectedFoodId) || null : null
   );
   const [servings, setServings] = useState(1);
+  const [gramInput, setGramInput] = useState('');
   const [showMicroDetails, setShowMicroDetails] = useState(false);
 
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
@@ -114,17 +177,37 @@ export default function AddFoodScreen() {
   const [isFetching, setIsFetching] = useState(false);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
 
+  const [apiResults, setApiResults] = useState<Food[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const addFoodEntry = useNutritionStore(s => s.addFoodEntry);
 
   const filteredFoods = useMemo(() => {
-    if (searchQuery.trim()) return searchFoods(searchQuery);
-    return FOOD_DATABASE;
-  }, [searchQuery]);
+    if (!searchQuery.trim()) return FOOD_DATABASE;
+    const local = searchFoods(searchQuery);
+    const localIds = new Set(local.map(f => f.id));
+    const extras = apiResults.filter(f => !localIds.has(f.id));
+    return [...local, ...extras];
+  }, [searchQuery, apiResults]);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (text.trim().length < 2) { setApiResults([]); return; }
+    setIsSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      const results = await searchFoodsAPI(text);
+      setApiResults(results);
+      setIsSearching(false);
+    }, 500);
+  }, []);
 
   const handleSelectFood = useCallback((food: Food) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedFood(food);
     setServings(1);
+    setGramInput(String(food.servingSize));
     Keyboard.dismiss();
   }, []);
 
@@ -137,8 +220,27 @@ export default function AddFoodScreen() {
 
   const adjustServings = useCallback((delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setServings(prev => Math.max(0.25, Math.min(10, prev + delta)));
-  }, []);
+    setServings(prev => {
+      const next = Math.max(0.25, Math.min(10, prev + delta));
+      if (selectedFood) setGramInput(String(Math.round(selectedFood.servingSize * next)));
+      return next;
+    });
+  }, [selectedFood]);
+
+  const handleGramInputChange = useCallback((text: string) => {
+    setGramInput(text);
+    const grams = parseFloat(text);
+    if (selectedFood && !isNaN(grams) && grams > 0) {
+      const newServings = Math.max(0.01, Math.min(20, grams / selectedFood.servingSize));
+      setServings(Math.round(newServings * 100) / 100);
+    }
+  }, [selectedFood]);
+
+  const handleGramInputBlur = useCallback(() => {
+    if (selectedFood) {
+      setGramInput(String(Math.round(selectedFood.servingSize * servings)));
+    }
+  }, [selectedFood, servings]);
 
   const getTopMicros = useCallback((food: Food) => {
     const micros = food.micros;
@@ -165,10 +267,13 @@ export default function AddFoodScreen() {
 
     if (food) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Save to backend for future reuse (fire-and-forget)
+      saveFoodToBackend(food).catch(() => {});
       setShowBarcodeModal(false);
       setBarcodeInput('');
       setSelectedFood(food);
       setServings(1);
+      setGramInput(String(food.servingSize));
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setBarcodeError('Product not found. Check the barcode and try again.');
@@ -217,6 +322,7 @@ export default function AddFoodScreen() {
             </View>
           </View>
 
+          {/* Amount with editable gram input */}
           <View className="px-4 py-4 bg-white dark:bg-gray-900 mt-2">
             <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Amount</Text>
             <View className="flex-row items-center justify-center">
@@ -227,9 +333,20 @@ export default function AddFoodScreen() {
                 <Minus size={20} color="#6B7280" />
               </Pressable>
               <View className="mx-6 items-center">
-                <Text className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {Math.round(selectedFood.servingSize * servings)}
-                </Text>
+                <TextInput
+                  value={gramInput}
+                  onChangeText={handleGramInputChange}
+                  onBlur={handleGramInputBlur}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  style={{
+                    fontSize: 40,
+                    fontWeight: '700',
+                    color: isDark ? '#34D399' : '#059669',
+                    textAlign: 'center',
+                    minWidth: 80,
+                  }}
+                />
                 <Text className="text-sm text-gray-500 dark:text-gray-400">grams</Text>
               </View>
               <Pressable
@@ -363,14 +480,16 @@ export default function AddFoodScreen() {
             placeholder="Search foods..."
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
             autoFocus
           />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')}>
+          {isSearching ? (
+            <ActivityIndicator size="small" color="#10B981" />
+          ) : searchQuery.length > 0 ? (
+            <Pressable onPress={() => { setSearchQuery(''); setApiResults([]); }}>
               <X size={20} color="#9CA3AF" />
             </Pressable>
-          )}
+          ) : null}
         </View>
 
         <Pressable
@@ -446,7 +565,6 @@ export default function AddFoodScreen() {
               className="bg-white dark:bg-gray-900 rounded-t-3xl px-6 pt-5"
               style={{ paddingBottom: insets.bottom + 20 }}
             >
-              {/* Handle */}
               <View className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full self-center mb-5" />
 
               <View className="flex-row items-center mb-5">
@@ -459,7 +577,6 @@ export default function AddFoodScreen() {
                 </View>
               </View>
 
-              {/* Large prominent input */}
               <View className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-5 mb-2">
                 <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
                   Barcode number (EAN-13 / UPC)

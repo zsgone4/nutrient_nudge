@@ -1,14 +1,17 @@
-import React from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Coffee, Sun, Moon, Cookie } from 'lucide-react-native';
+import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComponents';
 import { MealType, Macronutrients, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
+import { useNotifications } from '@/lib/hooks/useNotifications';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
 const EMPTY_ENTRIES: FoodLogEntry[] = [];
 
@@ -31,49 +34,21 @@ const emptyMicros: Micronutrients = {
   selenium: 0, chromium: 0, iodine: 0,
 };
 
-type InsightEntry = { outcome: string; messages: string[] };
-
-const ZACH_INSIGHT_MAP: Partial<Record<keyof Micronutrients, InsightEntry>> = {
-  magnesium:  { outcome: 'Sleep & Recovery',        messages: ["Great magnesium today — you're primed for deep, restorative sleep tonight.", "Solid magnesium! Expect better muscle recovery and a quality night's rest."] },
-  vitaminD:   { outcome: 'Mood & Energy',            messages: ["Strong vitamin D — great for mood, immunity, and keeping energy steady all day.", "Vitamin D covered! Your immune system and energy levels are well supported."] },
-  iron:       { outcome: 'Energy & Focus',           messages: ["Good iron today — expect sharper focus and sustained energy with less fatigue.", "Solid iron intake! Your blood oxygen delivery is well supported."] },
-  vitaminB12: { outcome: 'Brain & Energy',           messages: ["Excellent B12! Your brain is fuelled for clarity and mental stamina.", "Great vitamin B12 — supports nerve health and keeps your energy metabolism fired up."] },
-  calcium:    { outcome: 'Bones & Muscle',           messages: ["Calcium is ticked — strong bones and smooth muscle contractions are supported.", "Good calcium today! Working with vitamin D to keep your skeleton strong."] },
-  zinc:       { outcome: 'Immunity & Healing',       messages: ["Nice zinc levels — your immune system is primed and tissue repair is on.", "Solid zinc today! Great for immunity, hormone balance, and faster recovery."] },
-  vitaminC:   { outcome: 'Immunity & Skin',          messages: ["Strong vitamin C — immune defences are firing and collagen production is up.", "Great vitamin C! Supports recovery, glowing skin, and your immune response."] },
-  potassium:  { outcome: 'Heart & Performance',      messages: ["Good potassium supports heart health and keeps muscles performing at their best.", "Solid potassium today — great for blood pressure and athletic output."] },
-  vitaminA:   { outcome: 'Vision & Skin',            messages: ["Nice vitamin A — supporting sharp vision and skin regeneration from within.", "Vitamin A is covered! Keeps eyes, skin, and immune function in top shape."] },
-  vitaminB6:  { outcome: 'Mood & Energy',            messages: ["Solid B6 helps regulate mood and keeps your energy metabolism running smoothly.", "Good vitamin B6 — supports serotonin production and converts food into fuel."] },
-  selenium:   { outcome: 'Thyroid & Antioxidants',   messages: ["Selenium covered — great for thyroid function and fighting oxidative stress.", "Nice selenium today! Supports your metabolism and acts as a powerful antioxidant."] },
-  vitaminE:   { outcome: 'Recovery & Skin',          messages: ["Great vitamin E — a powerful antioxidant that protects cells and speeds recovery.", "Nice vitamin E! Helps shield muscles from exercise-induced stress."] },
-  vitaminK:   { outcome: 'Bone & Blood',             messages: ["Good vitamin K — essential for healthy clotting and maintaining bone density.", "Vitamin K solid today! Supports both cardiovascular and bone health."] },
-  vitaminB3:  { outcome: 'Energy & Brain',           messages: ["Good niacin (B3) — supports brain function and efficient energy metabolism."] },
-  vitaminB9:  { outcome: 'Cell Repair',              messages: ["Nice folate (B9) — key for DNA repair, cell growth, and energy production."] },
-};
-
-function getZachInsights(totals: Micronutrients, goals: Micronutrients) {
-  const results: Array<{ nutrient: keyof Micronutrients; pct: number; outcome: string; message: string }> = [];
-
-  (Object.keys(ZACH_INSIGHT_MAP) as (keyof Micronutrients)[]).forEach(key => {
-    const goal = goals[key];
-    if (!goal) return;
-    const pct = (totals[key] / goal) * 100;
-    if (pct < 60) return;
-    const entry = ZACH_INSIGHT_MAP[key]!;
-    const msgIdx = pct >= 90 ? 0 : Math.min(1, entry.messages.length - 1);
-    results.push({ nutrient: key, pct, outcome: entry.outcome, message: entry.messages[msgIdx] });
-  });
-
-  return results.sort((a, b) => b.pct - a.pct).slice(0, 3);
-}
+type Deficiency = { key: string; name: string; pct: number; foodSuggestions: string[] };
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { reminder, dismissReminder } = useNotifications();
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
+
+  const [zachMessage, setZachMessage] = useState<string | null>(null);
+  const [zachDeficiencies, setZachDeficiencies] = useState<Deficiency[]>([]);
+  const [zachLoading, setZachLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   const totals = React.useMemo(() => {
     const result = { macros: { ...emptyMacros }, micros: { ...emptyMicros } };
@@ -85,14 +60,50 @@ export default function DashboardScreen() {
     return result;
   }, [entries]);
 
+  const fetchZachInsight = async (currentEntries: FoodLogEntry[], currentTotals: typeof totals) => {
+    if (currentEntries.length === 0) return;
+    setZachLoading(true);
+    try {
+      const meals = currentEntries.map(e => e.food.name);
+      const res = await fetch(`${BACKEND_URL}/api/ai/zach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          totals: currentTotals.macros,
+          goals: dailyGoals.macros,
+          micros: currentTotals.micros,
+          microGoals: dailyGoals.micros,
+          meals,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { message: string; deficiencies: Deficiency[] };
+        setZachMessage(data.message);
+        setZachDeficiencies(data.deficiencies ?? []);
+      }
+    } catch {
+      // silently fail — Zach uses fallback message
+    } finally {
+      setZachLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasFetchedRef.current && entries.length > 0) {
+      hasFetchedRef.current = true;
+      fetchZachInsight(entries, totals);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries.length]);
+
+  const handleRefreshZach = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    fetchZachInsight(entries, totals);
+  };
+
   const calorieProgress = dailyGoals.macros.calories > 0
     ? totals.macros.calories / dailyGoals.macros.calories
     : 0;
-
-  const zachInsights = React.useMemo(
-    () => getZachInsights(totals.micros, dailyGoals.micros),
-    [totals.micros, dailyGoals.micros]
-  );
 
   const getMealCalories = (mealType: MealType) =>
     entries.filter(e => e.mealType === mealType).reduce((sum, e) => sum + e.food.macros.calories * e.servings, 0);
@@ -178,7 +189,37 @@ export default function DashboardScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Zach — Nutrient Coach */}
+        {/* Daily Reminder Banner */}
+        {reminder && (
+          <View
+            className="rounded-2xl mb-4 overflow-hidden"
+            style={{ backgroundColor: '#065F46' }}
+          >
+            <LinearGradient
+              colors={['#065F46', '#047857']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16 }}
+            >
+              <View
+                className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <Bell size={16} color="#ffffff" />
+              </View>
+              <Text className="flex-1 text-white text-sm font-medium leading-snug">{reminder}</Text>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); dismissReminder(); }}
+                className="w-7 h-7 rounded-full items-center justify-center ml-2"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <X size={14} color="#ffffff" />
+              </Pressable>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Zach AI Nutritionist */}
         <View className="bg-white dark:bg-gray-900 rounded-2xl p-4 mb-4 shadow-sm">
           <View className="flex-row items-center mb-3">
             <View
@@ -189,33 +230,79 @@ export default function DashboardScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-base font-bold text-gray-900 dark:text-white">Zach</Text>
-              <Text className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Your Nutrient Coach</Text>
+              <Text className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">AI Nutritionist</Text>
             </View>
+            {entries.length > 0 && (
+              <Pressable
+                onPress={handleRefreshZach}
+                disabled={zachLoading}
+                className="w-9 h-9 rounded-full items-center justify-center"
+                style={{ backgroundColor: zachLoading ? '#F3F4F6' : '#ECFDF5' }}
+              >
+                {zachLoading
+                  ? <ActivityIndicator size="small" color="#10B981" />
+                  : <RefreshCw size={16} color="#10B981" />
+                }
+              </Pressable>
+            )}
           </View>
 
-          {zachInsights.length === 0 ? (
+          {entries.length === 0 ? (
             <Text className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
               Log some food and I'll tell you exactly how today's nutrients are setting you up to feel, perform, sleep, and recover. Let's go! 💪
             </Text>
-          ) : (
-            zachInsights.map((insight, i) => (
-              <View
-                key={insight.nutrient}
-                className={`py-2.5 ${i > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}
-              >
-                <View className="flex-row items-start">
-                  <View className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 mr-2.5 flex-shrink-0" />
-                  <View className="flex-1">
-                    <Text className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-0.5">
-                      {insight.outcome}
-                    </Text>
-                    <Text className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                      {insight.message}
-                    </Text>
-                  </View>
+          ) : zachLoading && !zachMessage ? (
+            <View className="flex-row items-center py-2">
+              <ActivityIndicator size="small" color="#10B981" />
+              <Text className="text-sm text-gray-500 dark:text-gray-400 ml-3">Analysing your nutrition...</Text>
+            </View>
+          ) : zachMessage ? (
+            <View>
+              <Text className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+                {zachMessage}
+              </Text>
+              {zachDeficiencies.length > 0 && (
+                <View>
+                  <Text className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                    Nutrients to boost
+                  </Text>
+                  {zachDeficiencies.map((d) => (
+                    <View
+                      key={d.key}
+                      className="flex-row items-start py-2 border-t border-gray-100 dark:border-gray-800"
+                    >
+                      <View className="flex-1">
+                        <View className="flex-row items-center mb-1">
+                          <View
+                            className="h-1.5 rounded-full mr-2"
+                            style={{
+                              width: 28,
+                              backgroundColor: d.pct < 20 ? '#EF4444' : d.pct < 35 ? '#F59E0B' : '#10B981',
+                            }}
+                          />
+                          <Text className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                            {d.name}
+                          </Text>
+                          <Text
+                            className="text-xs ml-1"
+                            style={{ color: d.pct < 20 ? '#EF4444' : d.pct < 35 ? '#F59E0B' : '#10B981' }}
+                          >
+                            {Math.round(d.pct)}%
+                          </Text>
+                        </View>
+                        <Text className="text-xs text-gray-500 dark:text-gray-400">
+                          Try: {d.foodSuggestions.slice(0, 3).join(', ')}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              </View>
-            ))
+              )}
+            </View>
+          ) : (
+            <Text className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              Tap refresh to get Zach's personalised advice on today's nutrition. 💪
+            </Text>
           )}
         </View>
 

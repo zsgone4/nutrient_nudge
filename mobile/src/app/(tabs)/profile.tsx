@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings } from 'lucide-react-native';
+import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore, calculateTDEE, calculateTargetCalories } from '@/lib/state/nutrition-store';
@@ -26,7 +26,10 @@ export default function ProfileScreen() {
 
   const userProfile = useNutritionStore(s => s.userProfile);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
+  const macroGoalsOverridden = useNutritionStore(s => s.macroGoalsOverridden);
   const setUserProfile = useNutritionStore(s => s.setUserProfile);
+  const setCustomMacroGoals = useNutritionStore(s => s.setCustomMacroGoals);
+  const resetMacroGoals = useNutritionStore(s => s.resetMacroGoals);
 
   const userId = useUserStore(s => s.userId);
   const clearUser = useUserStore(s => s.clearUser);
@@ -34,6 +37,43 @@ export default function ProfileScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Custom macro goals modal state
+  const [showMacroModal, setShowMacroModal] = useState(false);
+  const [customCalories, setCustomCalories] = useState(dailyGoals.macros.calories.toString());
+  const [customProtein, setCustomProtein] = useState(dailyGoals.macros.protein.toString());
+  const [customCarbs, setCustomCarbs] = useState(dailyGoals.macros.carbohydrates.toString());
+  const [customFat, setCustomFat] = useState(dailyGoals.macros.fat.toString());
+
+  const handleOpenMacroModal = () => {
+    setCustomCalories(dailyGoals.macros.calories.toString());
+    setCustomProtein(dailyGoals.macros.protein.toString());
+    setCustomCarbs(dailyGoals.macros.carbohydrates.toString());
+    setCustomFat(dailyGoals.macros.fat.toString());
+    setShowMacroModal(true);
+  };
+
+  const handleSaveMacroGoals = () => {
+    const calories = parseInt(customCalories) || dailyGoals.macros.calories;
+    const protein = parseInt(customProtein) || dailyGoals.macros.protein;
+    const carbohydrates = parseInt(customCarbs) || dailyGoals.macros.carbohydrates;
+    const fat = parseInt(customFat) || dailyGoals.macros.fat;
+    setCustomMacroGoals({
+      calories,
+      protein,
+      carbohydrates,
+      fat,
+      fiber: dailyGoals.macros.fiber,
+      sugar: dailyGoals.macros.sugar,
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setShowMacroModal(false);
+  };
+
+  const handleResetMacroGoals = () => {
+    resetMacroGoals();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -353,9 +393,23 @@ export default function ProfileScreen() {
         <View className="p-4">
           {/* Calorie Target Card */}
           <View className="bg-emerald-500 rounded-2xl p-6 mb-4">
-            <Text className="text-white/70 text-sm mb-1">Your Daily Calorie Target</Text>
-            <Text className="text-white text-5xl font-bold">{dailyGoals.macros.calories}</Text>
-            <Text className="text-white/70 text-base mt-1">kcal per day</Text>
+            <View className="flex-row items-start justify-between">
+              <View className="flex-1">
+                <Text className="text-white/70 text-sm mb-1">
+                  Your Daily Calorie Target
+                  {macroGoalsOverridden ? ' (Custom)' : ''}
+                </Text>
+                <Text className="text-white text-5xl font-bold">{dailyGoals.macros.calories}</Text>
+                <Text className="text-white/70 text-base mt-1">kcal per day</Text>
+              </View>
+              <Pressable
+                onPress={handleOpenMacroModal}
+                className="w-9 h-9 rounded-full items-center justify-center"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+              >
+                <Sliders size={16} color="#ffffff" />
+              </Pressable>
+            </View>
 
             <View className="flex-row mt-4 pt-4 border-t border-white/20">
               <View className="flex-1">
@@ -372,6 +426,18 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          {macroGoalsOverridden && (
+            <Pressable
+              onPress={handleResetMacroGoals}
+              className="flex-row items-center justify-center bg-emerald-50 dark:bg-emerald-900/20 rounded-xl py-3 mb-4"
+            >
+              <RotateCcw size={15} color="#059669" />
+              <Text className="text-emerald-700 dark:text-emerald-400 font-medium text-sm ml-2">
+                Reset to auto-calculated goals
+              </Text>
+            </Pressable>
+          )}
 
           {/* Profile Summary Header */}
           <View className="flex-row items-center justify-between mb-3">
@@ -466,6 +532,53 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Custom Macro Goals Modal */}
+      <Modal visible={showMacroModal} transparent animationType="slide" onRequestClose={() => setShowMacroModal(false)}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View className="bg-white dark:bg-gray-900 rounded-t-3xl p-6">
+            <View className="flex-row items-center justify-between mb-6">
+              <View>
+                <Text className="text-xl font-bold text-gray-900 dark:text-white">Customise Goals</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Set your own daily macro targets</Text>
+              </View>
+              <Pressable
+                onPress={() => setShowMacroModal(false)}
+                className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 items-center justify-center"
+              >
+                <Text className="text-gray-600 dark:text-gray-300 text-base font-bold">✕</Text>
+              </Pressable>
+            </View>
+
+            {[
+              { label: 'Calories', unit: 'kcal', value: customCalories, setter: setCustomCalories },
+              { label: 'Protein', unit: 'g', value: customProtein, setter: setCustomProtein },
+              { label: 'Carbs', unit: 'g', value: customCarbs, setter: setCustomCarbs },
+              { label: 'Fat', unit: 'g', value: customFat, setter: setCustomFat },
+            ].map(({ label, unit, value, setter }) => (
+              <View key={label} className="flex-row items-center bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 mb-3">
+                <Text className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Text>
+                <TextInput
+                  value={value}
+                  onChangeText={setter}
+                  keyboardType="number-pad"
+                  selectTextOnFocus
+                  className="text-base font-semibold text-gray-900 dark:text-white text-right mr-1"
+                  style={{ minWidth: 60 }}
+                />
+                <Text className="text-sm text-gray-400">{unit}</Text>
+              </View>
+            ))}
+
+            <Pressable
+              onPress={handleSaveMacroGoals}
+              className="bg-emerald-500 rounded-xl py-4 items-center mt-2"
+            >
+              <Text className="text-white font-semibold text-base">Save Goals</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Delete Account Confirmation Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>

@@ -3217,7 +3217,7 @@ export const FOOD_DATABASE: Food[] = [
     micros: { ...emptyMicros, calcium: 195, vitaminB12: 0.8, phosphorus: 165, iodine: 35, vitaminB2: 0.3 },
   },
   {
-    id: 'cottage-cheese',
+    id: 'cottage-cheese-2',
     name: 'Cottage Cheese',
     servingSize: 100,
     servingUnit: 'g',
