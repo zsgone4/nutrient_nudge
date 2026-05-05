@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw } from 'lucide-react-native';
@@ -225,6 +226,7 @@ export default function ProfileScreen() {
             <Text className="text-white font-semibold text-base">Continue</Text>
           </Pressable>
         </View>
+        <KeyboardToolbar showArrows={false} doneText="Done" />
       </View>
     );
   }
@@ -576,6 +578,7 @@ export default function ProfileScreen() {
             >
               <Text className="text-white font-semibold text-base">Save Goals</Text>
             </Pressable>
+            <KeyboardToolbar showArrows={false} doneText="Done" />
           </View>
         </View>
       </Modal>

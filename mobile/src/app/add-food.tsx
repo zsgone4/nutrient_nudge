@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle } from 'lucide-react-native';
@@ -447,6 +448,7 @@ export default function AddFoodScreen() {
             </Text>
           </Pressable>
         </View>
+        <KeyboardToolbar showArrows={false} doneText="Done" />
       </View>
     );
   }
@@ -544,6 +546,8 @@ export default function AddFoodScreen() {
           </View>
         }
       />
+
+      <KeyboardToolbar showArrows={false} doneText="Done" />
 
       {/* Barcode Lookup Modal */}
       <Modal
