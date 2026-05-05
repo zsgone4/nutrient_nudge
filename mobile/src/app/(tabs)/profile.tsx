@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
-import { KeyboardToolbar } from 'react-native-keyboard-controller';
+import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator, InputAccessoryView, Keyboard, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw } from 'lucide-react-native';
@@ -20,6 +19,21 @@ import {
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
 type SetupStep = 'basics' | 'activity' | 'goal' | 'summary';
+
+const profileStyles = StyleSheet.create({
+  doneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#C6C6C8',
+    paddingHorizontal: 16,
+    height: 44,
+  },
+  doneButton: { paddingHorizontal: 8, paddingVertical: 6 },
+  doneText: { color: '#007AFF', fontSize: 17, fontWeight: '600' as const },
+});
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -176,6 +190,7 @@ export default function ProfileScreen() {
                 placeholder="30"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="number-pad"
+                inputAccessoryViewID={Platform.OS === 'ios' ? 'profileDone' : undefined}
                 value={age}
                 onChangeText={setAge}
               />
@@ -191,6 +206,7 @@ export default function ProfileScreen() {
                 placeholder="170"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="number-pad"
+                inputAccessoryViewID={Platform.OS === 'ios' ? 'profileDone' : undefined}
                 value={heightCm}
                 onChangeText={setHeightCm}
               />
@@ -206,6 +222,7 @@ export default function ProfileScreen() {
                 placeholder="70"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="number-pad"
+                inputAccessoryViewID={Platform.OS === 'ios' ? 'profileDone' : undefined}
                 value={weightKg}
                 onChangeText={setWeightKg}
               />
@@ -226,7 +243,15 @@ export default function ProfileScreen() {
             <Text className="text-white font-semibold text-base">Continue</Text>
           </Pressable>
         </View>
-        <KeyboardToolbar showArrows={false} doneText="Done" />
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID="profileDone">
+            <View style={profileStyles.doneBar}>
+              <Pressable onPress={() => Keyboard.dismiss()} style={profileStyles.doneButton}>
+                <Text style={profileStyles.doneText}>Done</Text>
+              </Pressable>
+            </View>
+          </InputAccessoryView>
+        )}
       </View>
     );
   }
@@ -565,6 +590,7 @@ export default function ProfileScreen() {
                   onChangeText={setter}
                   keyboardType="number-pad"
                   selectTextOnFocus
+                  inputAccessoryViewID={Platform.OS === 'ios' ? 'macroDone' : undefined}
                   className="text-base font-semibold text-gray-900 dark:text-white text-right mr-1"
                   style={{ minWidth: 60 }}
                 />
@@ -578,7 +604,15 @@ export default function ProfileScreen() {
             >
               <Text className="text-white font-semibold text-base">Save Goals</Text>
             </Pressable>
-            <KeyboardToolbar showArrows={false} doneText="Done" />
+            {Platform.OS === 'ios' && (
+              <InputAccessoryView nativeID="macroDone">
+                <View style={profileStyles.doneBar}>
+                  <Pressable onPress={() => Keyboard.dismiss()} style={profileStyles.doneButton}>
+                    <Text style={profileStyles.doneText}>Done</Text>
+                  </Pressable>
+                </View>
+              </InputAccessoryView>
+            )}
           </View>
         </View>
       </Modal>
