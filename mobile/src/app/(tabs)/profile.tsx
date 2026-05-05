@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator, InputAccessoryView, Keyboard, Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator, InputAccessoryView, Keyboard, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw } from 'lucide-react-native';
@@ -562,7 +562,14 @@ export default function ProfileScreen() {
 
       {/* Custom Macro Goals Modal */}
       <Modal visible={showMacroModal} transparent animationType="slide" onRequestClose={() => setShowMacroModal(false)}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1, justifyContent: 'flex-end' }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }}
+            onPress={() => Keyboard.dismiss()}
+          />
           <View className="bg-white dark:bg-gray-900 rounded-t-3xl p-6">
             <View className="flex-row items-center justify-between mb-6">
               <View>
@@ -570,7 +577,7 @@ export default function ProfileScreen() {
                 <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Set your own daily macro targets</Text>
               </View>
               <Pressable
-                onPress={() => setShowMacroModal(false)}
+                onPress={() => { Keyboard.dismiss(); setShowMacroModal(false); }}
                 className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 items-center justify-center"
               >
                 <Text className="text-gray-600 dark:text-gray-300 text-base font-bold">✕</Text>
@@ -590,7 +597,6 @@ export default function ProfileScreen() {
                   onChangeText={setter}
                   keyboardType="number-pad"
                   selectTextOnFocus
-                  inputAccessoryViewID={Platform.OS === 'ios' ? 'macroDone' : undefined}
                   className="text-base font-semibold text-gray-900 dark:text-white text-right mr-1"
                   style={{ minWidth: 60 }}
                 />
@@ -599,22 +605,13 @@ export default function ProfileScreen() {
             ))}
 
             <Pressable
-              onPress={handleSaveMacroGoals}
+              onPress={() => { Keyboard.dismiss(); handleSaveMacroGoals(); }}
               className="bg-emerald-500 rounded-xl py-4 items-center mt-2"
             >
               <Text className="text-white font-semibold text-base">Save Goals</Text>
             </Pressable>
-            {Platform.OS === 'ios' && (
-              <InputAccessoryView nativeID="macroDone">
-                <View style={profileStyles.doneBar}>
-                  <Pressable onPress={() => Keyboard.dismiss()} style={profileStyles.doneButton}>
-                    <Text style={profileStyles.doneText}>Done</Text>
-                  </Pressable>
-                </View>
-              </InputAccessoryView>
-            )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Account Confirmation Modal */}
