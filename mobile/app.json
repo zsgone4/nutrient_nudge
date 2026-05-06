@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vibecode.nutrientnudge-9lzdjs",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "infoPlist": {}
     },
     "android": {
