@@ -2,12 +2,12 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, InputAccessoryView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle } from 'lucide-react-native';
+import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
-import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients } from '@/lib/types/nutrition';
+import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
@@ -266,6 +266,22 @@ export default function AddFoodScreen() {
     return entries.sort((a, b) => b.value - a.value).slice(0, 5);
   }, []);
 
+  const getHighMicros = useCallback((food: Food, currentServings: number) => {
+    const micros = food.micros;
+    const highlights: Array<{ key: keyof Micronutrients; name: string; pct: number }> = [];
+    (Object.keys(micros) as (keyof Micronutrients)[]).forEach(key => {
+      const value = micros[key] * currentServings;
+      const dv = DAILY_VALUES.micros[key];
+      if (dv > 0 && value > 0) {
+        const pct = (value / dv) * 100;
+        if (pct >= 20) {
+          highlights.push({ key, name: MICRONUTRIENT_INFO[key].name, pct: Math.round(pct) });
+        }
+      }
+    });
+    return highlights.sort((a, b) => b.pct - a.pct).slice(0, 5);
+  }, []);
+
   const handleBarcodeLookup = useCallback(async () => {
     const barcode = barcodeInput.trim();
     if (barcode.length < 8) {
@@ -307,6 +323,7 @@ export default function AddFoodScreen() {
       sugar: Math.round(macros.sugar * servings * 10) / 10,
     };
     const topMicros = getTopMicros(selectedFood);
+    const highMicros = getHighMicros(selectedFood, servings);
 
     return (
       <View className="flex-1 bg-gray-50 dark:bg-black" style={{ paddingTop: insets.top }}>
@@ -335,6 +352,27 @@ export default function AddFoodScreen() {
                 </Text>
               </View>
             </View>
+            {highMicros.length > 0 && (
+              <View className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <View className="flex-row items-center mb-2">
+                  <Zap size={13} color="#10B981" />
+                  <Text className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ml-1 uppercase tracking-wider">
+                    High in
+                  </Text>
+                </View>
+                <View className="flex-row flex-wrap">
+                  {highMicros.map(({ key, name, pct }) => (
+                    <View
+                      key={key}
+                      className="bg-emerald-50 dark:bg-emerald-900/25 border border-emerald-200 dark:border-emerald-700 rounded-full px-3 py-1 mr-2 mb-2 flex-row items-center"
+                    >
+                      <Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{name}</Text>
+                      <Text className="text-xs text-emerald-500 dark:text-emerald-400 ml-1">{pct}%</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Amount with editable gram input */}
