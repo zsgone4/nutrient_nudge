@@ -3,7 +3,7 @@
     "name": "Nutrient Nudge",
     "slug": "nutrient-nudge",
     "scheme": "vibecode",
-    "version": "3",
+    "version": "4",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
