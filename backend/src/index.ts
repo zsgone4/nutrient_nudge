@@ -16,6 +16,11 @@ import { aiRouter } from "./routes/ai";
 
 const app = new Hono();
 
+app.onError((err, c) => {
+  console.error("Unhandled error:", err);
+  return c.json({ error: "An unexpected error occurred. Please try again." }, 500);
+});
+
 // CORS — allow localhost in dev, plus any origins set in ALLOWED_ORIGINS (comma-separated)
 const extraOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
