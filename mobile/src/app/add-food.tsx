@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, InputAccessoryView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, ScrollView, Pressable, Keyboard, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, InputAccessoryView, StyleSheet, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, Droplet, Cookie, ScanBarcode, AlertCircle, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
-import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
@@ -202,6 +202,8 @@ export default function AddFoodScreen() {
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const logs = useNutritionStore(s => s.logs);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
+  const savedMeals = useNutritionStore(s => s.savedMeals);
+  const deleteSavedMeal = useNutritionStore(s => s.deleteSavedMeal);
   const userId = useUserStore(s => s.userId);
 
   const filteredFoods = useMemo(() => {
@@ -231,6 +233,17 @@ export default function AddFoodScreen() {
     setGramInput(String(food.servingSize));
     Keyboard.dismiss();
   }, []);
+
+  const handleAddSavedMeal = useCallback((meal: SavedMeal) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    meal.entries.forEach(e => addFoodEntry(e.food, e.servings, mealType));
+    setTimeout(() => {
+      const existing = logs[selectedDate] ?? [];
+      const added = meal.entries.map(e => ({ food: e.food, servings: e.servings, mealType, id: '', timestamp: 0, date: selectedDate }));
+      if (userId) syncNutrientScore(userId, selectedDate, [...existing, ...added], dailyGoals.micros);
+    }, 50);
+    router.back();
+  }, [addFoodEntry, mealType, logs, selectedDate, userId, dailyGoals, router]);
 
   const handleAddFood = useCallback(() => {
     if (!selectedFood) return;
@@ -576,6 +589,38 @@ export default function AddFoodScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* My Saved Meals */}
+      {savedMeals.length > 0 && (
+        <View className="mt-2">
+          <Text className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+            My Meals
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+            {savedMeals.map(meal => {
+              const totalCals = Math.round(meal.entries.reduce((sum, e) => sum + e.food.macros.calories * e.servings, 0));
+              return (
+                <Pressable
+                  key={meal.id}
+                  onPress={() => handleAddSavedMeal(meal)}
+                  onLongPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    Alert.alert('Delete Meal', `Remove "${meal.name}" from saved meals?`, [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => deleteSavedMeal(meal.id) },
+                    ]);
+                  }}
+                  className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 active:opacity-70"
+                  style={{ minWidth: 120 }}
+                >
+                  <Text className="text-emerald-800 dark:text-emerald-300 font-semibold text-sm" numberOfLines={1}>{meal.name}</Text>
+                  <Text className="text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">{totalCals} kcal · {meal.entries.length} items</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       <FlatList
         data={filteredFoods}

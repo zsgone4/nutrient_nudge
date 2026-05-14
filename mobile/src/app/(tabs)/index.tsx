@@ -163,7 +163,7 @@ export default function DashboardScreen() {
               <ChevronLeft size={18} color="white" />
             </Pressable>
             <Text className="text-white text-sm font-semibold mx-2 min-w-16 text-center">{dateLabel}</Text>
-            <Pressable onPress={goToNextDay} className="p-1.5" disabled={isToday} style={{ opacity: isToday ? 0.4 : 1 }}>
+            <Pressable onPress={goToNextDay} className="p-1.5">
               <ChevronRight size={18} color="white" />
             </Pressable>
           </View>

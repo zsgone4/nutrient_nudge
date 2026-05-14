@@ -99,9 +99,19 @@ function calculateMacros(calories: number, profile: UserProfile): Macronutrients
   };
 }
 
+export interface SavedMeal {
+  id: string;
+  name: string;
+  entries: { food: Food; servings: number }[];
+  createdAt: number;
+}
+
 interface NutritionState {
   // Daily log entries keyed by date (YYYY-MM-DD)
   logs: Record<string, FoodLogEntry[]>;
+
+  // User-saved meal templates
+  savedMeals: SavedMeal[];
 
   // User's daily goals (can be customized)
   dailyGoals: {
@@ -117,6 +127,10 @@ interface NutritionState {
 
   // Current date being viewed
   selectedDate: string;
+
+  // Saved meal actions
+  saveMeal: (name: string, entries: { food: Food; servings: number }[]) => void;
+  deleteSavedMeal: (id: string) => void;
 
   // Actions
   addFoodEntry: (food: Food, servings: number, mealType: MealType) => void;
@@ -140,10 +154,20 @@ export const useNutritionStore = create<NutritionState>()(
   persist(
     (set, get) => ({
       logs: {},
+      savedMeals: [],
       dailyGoals: DAILY_VALUES,
       macroGoalsOverridden: false,
       userProfile: defaultProfile,
       selectedDate: getTodayString(),
+
+      saveMeal: (name, entries) => {
+        const meal: SavedMeal = { id: generateId(), name, entries, createdAt: Date.now() };
+        set(state => ({ savedMeals: [meal, ...state.savedMeals] }));
+      },
+
+      deleteSavedMeal: (id) => {
+        set(state => ({ savedMeals: state.savedMeals.filter(m => m.id !== id) }));
+      },
 
       addFoodEntry: (food, servings, mealType) => {
         const date = get().selectedDate;

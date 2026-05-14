@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, TextInput, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X } from 'lucide-react-native';
+import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X, Bookmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -36,7 +36,11 @@ export default function MealDetailScreen() {
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const removeFoodEntry = useNutritionStore(s => s.removeFoodEntry);
   const updateFoodEntry = useNutritionStore(s => s.updateFoodEntry);
+  const saveMeal = useNutritionStore(s => s.saveMeal);
   const userId = useUserStore(s => s.userId);
+
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [mealNameInput, setMealNameInput] = useState('');
 
   // Get entries for this meal
   const entries = useMemo(() => {
@@ -112,6 +116,15 @@ export default function MealDetailScreen() {
     router.push({ pathname: '/add-food', params: { mealType } });
   }, [router, mealType]);
 
+  const handleSaveMeal = useCallback(() => {
+    const name = mealNameInput.trim();
+    if (!name || entries.length === 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    saveMeal(name, entries.map(e => ({ food: e.food, servings: e.servings })));
+    setSaveModalVisible(false);
+    setMealNameInput('');
+  }, [mealNameInput, entries, saveMeal]);
+
   return (
     <View className="flex-1 bg-gray-50 dark:bg-black" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -130,13 +143,53 @@ export default function MealDetailScreen() {
             {Math.round(mealTotals.calories)} kcal total
           </Text>
         </View>
-        <Pressable
-          onPress={handleAddFood}
-          className="w-10 h-10 bg-emerald-500 rounded-full items-center justify-center"
-        >
-          <Plus size={20} color="#ffffff" />
-        </Pressable>
+        <View className="flex-row gap-2">
+          {entries.length > 0 && (
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMealNameInput(MEAL_LABELS[mealType]); setSaveModalVisible(true); }}
+              className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center"
+            >
+              <Bookmark size={18} color="#10B981" />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={handleAddFood}
+            className="w-10 h-10 bg-emerald-500 rounded-full items-center justify-center"
+          >
+            <Plus size={20} color="#ffffff" />
+          </Pressable>
+        </View>
       </View>
+
+      {/* Save as Meal Modal */}
+      <Modal visible={saveModalVisible} transparent animationType="fade">
+        <Pressable className="flex-1 bg-black/50 justify-center px-6" onPress={() => setSaveModalVisible(false)}>
+          <Pressable onPress={e => e.stopPropagation()} className="bg-white dark:bg-gray-900 rounded-2xl p-6">
+            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">Save as Meal</Text>
+            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Save these {entries.length} items so you can add them again in one tap.
+            </Text>
+            <TextInput
+              className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-base text-gray-900 dark:text-white mb-4"
+              placeholder="e.g. Tuna Salad, Pre-workout Meal…"
+              placeholderTextColor="#9CA3AF"
+              value={mealNameInput}
+              onChangeText={setMealNameInput}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSaveMeal}
+            />
+            <View className="flex-row gap-3">
+              <Pressable onPress={() => setSaveModalVisible(false)} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 items-center">
+                <Text className="font-semibold text-gray-600 dark:text-gray-300">Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleSaveMeal} className="flex-1 py-3 rounded-xl bg-emerald-500 items-center">
+                <Text className="font-semibold text-white">Save</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Meal Summary */}
       <View className="bg-white dark:bg-gray-900 px-4 py-4 border-b border-gray-200 dark:border-gray-800">
