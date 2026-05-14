@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell } from 'lucide-react-native';
+import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -42,6 +42,7 @@ export default function DashboardScreen() {
   const { reminder, dismissReminder } = useNotifications();
 
   const selectedDate = useNutritionStore(s => s.selectedDate);
+  const setSelectedDate = useNutritionStore(s => s.setSelectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const calorieGoal = useNutritionStore(s => s.dailyGoals.macros.calories);
   const proteinGoal = useNutritionStore(s => s.dailyGoals.macros.protein);
@@ -127,8 +128,23 @@ export default function DashboardScreen() {
     router.push({ pathname: '/add-food', params: { mealType } });
   };
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
-  const dateLabel = isToday ? 'Today' : new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  const todayString = new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === todayString;
+  const dateLabel = isToday ? 'Today' : new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  const goToPrevDay = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  const goToNextDay = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
 
   return (
     <View className="flex-1 bg-gray-50 dark:bg-black">
@@ -138,9 +154,19 @@ export default function DashboardScreen() {
         end={{ x: 1, y: 1 }}
         style={{ paddingTop: insets.top, paddingBottom: 80, paddingHorizontal: 20 }}
       >
-        <View>
-          <Text className="text-white/70 text-sm font-medium mt-4">{dateLabel}</Text>
-          <Text className="text-white text-2xl font-bold mt-1">Daily Summary</Text>
+        <View className="flex-row items-center justify-between mt-4">
+          <View className="flex-1">
+            <Text className="text-white text-2xl font-bold">Daily Summary</Text>
+          </View>
+          <View className="flex-row items-center bg-white/20 rounded-full px-1 py-1">
+            <Pressable onPress={goToPrevDay} className="p-1.5">
+              <ChevronLeft size={18} color="white" />
+            </Pressable>
+            <Text className="text-white text-sm font-semibold mx-2 min-w-16 text-center">{dateLabel}</Text>
+            <Pressable onPress={goToNextDay} className="p-1.5" disabled={isToday} style={{ opacity: isToday ? 0.4 : 1 }}>
+              <ChevronRight size={18} color="white" />
+            </Pressable>
+          </View>
         </View>
 
         <View className="flex-row items-center justify-between mt-6">

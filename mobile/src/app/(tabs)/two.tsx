@@ -148,6 +148,7 @@ export default function MicronutrientsScreen() {
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
+  const allLogs = useNutritionStore(s => s.logs);
 
   const totals = useMemo(() => {
     const macros = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0 };
@@ -209,6 +210,38 @@ export default function MicronutrientsScreen() {
     return count > 0 ? Math.round(totalPercentage / count) : 0;
   }, [totals, dailyGoals]);
 
+  const weeklyScores = useMemo(() => {
+    const result: { date: string; day: string; score: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayEntries = allLogs[dateStr] ?? [];
+      let totalPct = 0;
+      let count = 0;
+      const micros: Micronutrients = {
+        vitaminA: 0, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0,
+        vitaminB6: 0, vitaminB7: 0, vitaminB9: 0, vitaminB12: 0, vitaminC: 0,
+        vitaminD: 0, vitaminE: 0, vitaminK: 0, calcium: 0, iron: 0, magnesium: 0,
+        phosphorus: 0, potassium: 0, sodium: 0, zinc: 0, copper: 0, manganese: 0,
+        selenium: 0, chromium: 0, iodine: 0,
+      };
+      dayEntries.forEach(entry => {
+        (Object.keys(micros) as (keyof Micronutrients)[]).forEach(k => {
+          micros[k] += (entry.food.micros[k] ?? 0) * entry.servings;
+        });
+      });
+      (Object.keys(micros) as (keyof Micronutrients)[]).forEach(k => {
+        const goal = dailyGoals.micros[k];
+        if (goal > 0) { totalPct += Math.min((micros[k] / goal) * 100, 100); count++; }
+      });
+      const score = count > 0 ? Math.round(totalPct / count) : 0;
+      const day = i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' });
+      result.push({ date: dateStr, day, score });
+    }
+    return result;
+  }, [allLogs, dailyGoals]);
+
   const prevScoreRef = useRef<number>(0);
 
   useEffect(() => {
@@ -261,9 +294,48 @@ export default function MicronutrientsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Weekly Score Chart */}
+        <View className="mx-4 mt-4 mb-3 rounded-2xl p-4 bg-white dark:bg-gray-900" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+          <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">7-Day Nutrient Score</Text>
+          <View className="flex-row items-end justify-between" style={{ height: 80 }}>
+            {weeklyScores.map(({ date, day, score }) => {
+              const barColor = getScoreColor(score);
+              const isSelected = date === selectedDate;
+              const barHeight = score > 0 ? Math.max((score / 100) * 72, 6) : 4;
+              return (
+                <View key={date} className="flex-1 items-center">
+                  <Text className="text-xs font-bold mb-1" style={{ color: isSelected ? barColor : '#9CA3AF' }}>
+                    {score > 0 ? score : ''}
+                  </Text>
+                  <View
+                    style={{
+                      width: 28,
+                      height: barHeight,
+                      backgroundColor: score > 0 ? barColor : '#E5E7EB',
+                      borderRadius: 6,
+                      opacity: isSelected ? 1 : 0.5,
+                    }}
+                  />
+                  <Text className="text-xs mt-1.5" style={{ color: isSelected ? barColor : '#9CA3AF', fontWeight: isSelected ? '700' : '400' }}>
+                    {day}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+          <View className="flex-row justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+            {([{ label: 'Excellent', color: '#059669' }, { label: 'Good', color: '#10B981' }, { label: 'Getting There', color: '#F59E0B' }, { label: 'Low', color: '#EF4444' }] as { label: string; color: string }[]).map(({ label, color }) => (
+              <View key={label} className="flex-row items-center">
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, marginRight: 4 }} />
+                <Text className="text-xs text-gray-500 dark:text-gray-400">{label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* Header Score Card */}
         <View
-          className="mx-4 mt-4 rounded-2xl p-5 shadow-sm"
+          className="mx-4 mt-1 rounded-2xl p-5 shadow-sm"
           style={{ backgroundColor: getScoreColor(overallScore) + '15', borderWidth: 1.5, borderColor: getScoreColor(overallScore) + '40' }}
         >
           <View className="flex-row items-center justify-between mb-3">
