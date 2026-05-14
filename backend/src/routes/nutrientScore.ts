@@ -147,6 +147,34 @@ nutrientScoreRouter.get("/:userId/:date", async (c) => {
   });
 });
 
+// POST /api/nutrient-score/upsert - Save a pre-calculated score from the client
+nutrientScoreRouter.post(
+  "/upsert",
+  zValidator(
+    "json",
+    z.object({
+      userId: z.string().min(1),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      score: z.number().min(0).max(100),
+      micronutrients: z.string(),
+    })
+  ),
+  async (c) => {
+    const { userId, date, score, micronutrients } = c.req.valid("json");
+
+    const user = await db.signup.findUnique({ where: { id: userId } });
+    if (!user) return c.json({ error: "User not found" }, 404);
+
+    const result = await db.nutrientScore.upsert({
+      where: { userId_date: { userId, date } },
+      update: { score, micronutrients },
+      create: { userId, date, score, micronutrients },
+    });
+
+    return c.json({ success: true, nutrientScore: result });
+  }
+);
+
 // GET /api/nutrient-score/history/:userId - Get nutrient score history for a user
 nutrientScoreRouter.get("/history/:userId", async (c) => {
   const userId = c.req.param("userId");

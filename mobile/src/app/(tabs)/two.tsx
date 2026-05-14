@@ -4,9 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useUserStore } from '@/lib/state/user-store';
 import { MICRONUTRIENT_INFO, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
 const EMPTY_ENTRIES: FoodLogEntry[] = [];
 import { ShareScoreModal } from '@/components/ShareScoreModal';
@@ -149,6 +153,19 @@ export default function MicronutrientsScreen() {
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
   const allLogs = useNutritionStore(s => s.logs);
+  const userId = useUserStore(s => s.userId);
+
+  const { data: backendHistory } = useQuery({
+    queryKey: ['nutrientScoreHistory', userId],
+    queryFn: async () => {
+      const res = await fetch(`${BACKEND_URL}/api/nutrient-score/history/${userId}?limit=7`);
+      if (!res.ok) return null;
+      const json = await res.json() as { scores: { date: string; score: number }[] };
+      return json.scores;
+    },
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
 
   const totals = useMemo(() => {
     const macros = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0 };
@@ -216,6 +233,15 @@ export default function MicronutrientsScreen() {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
+      const day = i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' });
+
+      // Prefer backend score, fall back to local calculation
+      const backendScore = backendHistory?.find(s => s.date === dateStr)?.score;
+      if (backendScore !== undefined) {
+        result.push({ date: dateStr, day, score: backendScore });
+        continue;
+      }
+
       const dayEntries = allLogs[dateStr] ?? [];
       let totalPct = 0;
       let count = 0;
@@ -235,12 +261,10 @@ export default function MicronutrientsScreen() {
         const goal = dailyGoals.micros[k];
         if (goal > 0) { totalPct += Math.min((micros[k] / goal) * 100, 100); count++; }
       });
-      const score = count > 0 ? Math.round(totalPct / count) : 0;
-      const day = i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' });
-      result.push({ date: dateStr, day, score });
+      result.push({ date: dateStr, day, score: count > 0 ? Math.round(totalPct / count) : 0 });
     }
     return result;
-  }, [allLogs, dailyGoals]);
+  }, [allLogs, dailyGoals, backendHistory]);
 
   const prevScoreRef = useRef<number>(0);
 

@@ -6,7 +6,9 @@ import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X } from 'lucide-react-
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useUserStore } from '@/lib/state/user-store';
 import { MealType, FoodLogEntry, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
+import { syncNutrientScore } from '@/lib/utils/nutrientScore';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast',
@@ -31,8 +33,10 @@ export default function MealDetailScreen() {
   // Get store values
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const logs = useNutritionStore(s => s.logs);
+  const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const removeFoodEntry = useNutritionStore(s => s.removeFoodEntry);
   const updateFoodEntry = useNutritionStore(s => s.updateFoodEntry);
+  const userId = useUserStore(s => s.userId);
 
   // Get entries for this meal
   const entries = useMemo(() => {
@@ -65,6 +69,10 @@ export default function MealDetailScreen() {
           onPress: () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             removeFoodEntry(entryId);
+            setTimeout(() => {
+              const updated = (logs[selectedDate] ?? []).filter(e => e.id !== entryId);
+              if (userId) syncNutrientScore(userId, selectedDate, updated, dailyGoals.micros);
+            }, 50);
           },
         },
       ]
@@ -81,9 +89,13 @@ export default function MealDetailScreen() {
     if (editingEntry) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       updateFoodEntry(editingEntry, editServings);
+      setTimeout(() => {
+        const updated = (logs[selectedDate] ?? []).map(e => e.id === editingEntry ? { ...e, servings: editServings } : e);
+        if (userId) syncNutrientScore(userId, selectedDate, updated, dailyGoals.micros);
+      }, 50);
       setEditingEntry(null);
     }
-  }, [editingEntry, editServings, updateFoodEntry]);
+  }, [editingEntry, editServings, updateFoodEntry, userId, selectedDate, logs, dailyGoals]);
 
   const handleCancelEdit = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

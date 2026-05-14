@@ -7,8 +7,10 @@ import * as Haptics from 'expo-haptics';
 
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useUserStore } from '@/lib/state/user-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
+import { syncNutrientScore } from '@/lib/utils/nutrientScore';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -197,6 +199,10 @@ export default function AddFoodScreen() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addFoodEntry = useNutritionStore(s => s.addFoodEntry);
+  const selectedDate = useNutritionStore(s => s.selectedDate);
+  const logs = useNutritionStore(s => s.logs);
+  const dailyGoals = useNutritionStore(s => s.dailyGoals);
+  const userId = useUserStore(s => s.userId);
 
   const filteredFoods = useMemo(() => {
     if (!searchQuery.trim()) return FOOD_DATABASE;
@@ -230,8 +236,13 @@ export default function AddFoodScreen() {
     if (!selectedFood) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addFoodEntry(selectedFood, servings, mealType);
+    // Sync score to backend after store updates (next tick)
+    setTimeout(() => {
+      const updatedEntries = [...(logs[selectedDate] ?? []), { food: selectedFood, servings, mealType, id: '', timestamp: 0, date: selectedDate }];
+      if (userId) syncNutrientScore(userId, selectedDate, updatedEntries, dailyGoals.micros);
+    }, 50);
     router.back();
-  }, [selectedFood, servings, mealType, addFoodEntry, router]);
+  }, [selectedFood, servings, mealType, addFoodEntry, router, userId, selectedDate, logs, dailyGoals]);
 
   const adjustServings = useCallback((delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
