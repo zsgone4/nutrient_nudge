@@ -358,11 +358,11 @@ export default function AddFoodScreen() {
     const { macros, micros } = selectedFood;
     const scaledMacros = {
       calories: Math.round(macros.calories * servings),
-      protein: Math.round(macros.protein * servings * 10) / 10,
-      carbohydrates: Math.round(macros.carbohydrates * servings * 10) / 10,
-      fat: Math.round(macros.fat * servings * 10) / 10,
-      fiber: Math.round(macros.fiber * servings * 10) / 10,
-      sugar: Math.round(macros.sugar * servings * 10) / 10,
+      protein: Math.round(macros.protein * servings),
+      carbohydrates: Math.round(macros.carbohydrates * servings),
+      fat: Math.round(macros.fat * servings),
+      fiber: Math.round(macros.fiber * servings),
+      sugar: Math.round(macros.sugar * servings),
     };
     const topMicros = getTopMicros(selectedFood);
     const highMicros = getHighMicros(selectedFood, servings);
@@ -673,10 +673,10 @@ export default function AddFoodScreen() {
             </View>
             <View className="items-end">
               <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                {food.macros.protein}g P
+                {Math.round(food.macros.protein)}g P
               </Text>
               <Text className="text-xs text-gray-400">
-                {food.macros.carbohydrates}g C • {food.macros.fat}g F
+                {Math.round(food.macros.carbohydrates)}g C • {Math.round(food.macros.fat)}g F
               </Text>
             </View>
           </Pressable>
