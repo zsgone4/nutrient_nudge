@@ -206,13 +206,31 @@ export default function AddFoodScreen() {
   const deleteSavedMeal = useNutritionStore(s => s.deleteSavedMeal);
   const userId = useUserStore(s => s.userId);
 
+  // Collect unique foods from past days, newest day first, in log order within each day
+  const recentFoods = useMemo(() => {
+    const pastDates = Object.keys(logs)
+      .filter(d => d < selectedDate)
+      .sort((a, b) => b.localeCompare(a));
+    const seenIds = new Set<string>();
+    const result: Food[] = [];
+    for (const date of pastDates) {
+      for (const entry of (logs[date] ?? [])) {
+        if (!seenIds.has(entry.food.id)) {
+          seenIds.add(entry.food.id);
+          result.push(entry.food);
+        }
+      }
+    }
+    return result;
+  }, [logs, selectedDate]);
+
   const filteredFoods = useMemo(() => {
-    if (!searchQuery.trim()) return FOOD_DATABASE;
+    if (!searchQuery.trim()) return recentFoods;
     const local = searchFoods(searchQuery);
     const localIds = new Set(local.map(f => f.id));
     const extras = apiResults.filter(f => !localIds.has(f.id));
     return [...local, ...extras];
-  }, [searchQuery, apiResults]);
+  }, [searchQuery, apiResults, recentFoods]);
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
@@ -632,6 +650,13 @@ export default function AddFoodScreen() {
         initialNumToRender={20}
         maxToRenderPerBatch={20}
         windowSize={10}
+        ListHeaderComponent={
+          !searchQuery.trim() && recentFoods.length > 0 ? (
+            <Text className="px-4 pt-3 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+              Recently Added
+            </Text>
+          ) : null
+        }
         renderItem={({ item: food }) => (
           <Pressable
             onPress={() => handleSelectFood(food)}
@@ -658,8 +683,19 @@ export default function AddFoodScreen() {
         )}
         ListEmptyComponent={
           <View className="items-center justify-center py-20">
-            <Text className="text-gray-400 dark:text-gray-500 text-base">No foods found</Text>
-            <Text className="text-gray-400 dark:text-gray-500 text-sm mt-1">Try a different search term</Text>
+            {!searchQuery.trim() ? (
+              <>
+                <Text className="text-gray-400 dark:text-gray-500 text-base">No previous meals yet</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm mt-1 text-center px-8">
+                  Search above to find foods — they'll appear here after your first day of logging
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text className="text-gray-400 dark:text-gray-500 text-base">No foods found</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-sm mt-1">Try a different search term</Text>
+              </>
+            )}
           </View>
         }
       />
