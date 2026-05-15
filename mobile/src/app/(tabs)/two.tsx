@@ -48,19 +48,42 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
   const isLow = percentage < 30;
   const isGood = percentage >= 70 && percentage <= 120;
   const isHigh = percentage > 120;
+  const isMiddle = !isLow && !isGood && !isHigh;
 
   let statusIcon = null;
   let statusColor = accentColor;
+  let statusBg = '#F3F4F6';
+  let statusTextColor = '#374151';
+  let statusLabel = '';
+  let statusMessage = '';
 
   if (isLow) {
-    statusIcon = <AlertTriangle size={14} color="#F59E0B" />;
+    statusIcon = <AlertTriangle size={13} color="#92400E" />;
     statusColor = '#F59E0B';
+    statusBg = '#FEF3C7';
+    statusTextColor = '#92400E';
+    statusLabel = 'Too little';
+    statusMessage = info.tooLittle;
   } else if (isGood) {
-    statusIcon = <CheckCircle size={14} color="#10B981" />;
+    statusIcon = <CheckCircle size={13} color="#065F46" />;
     statusColor = '#10B981';
+    statusBg = '#D1FAE5';
+    statusTextColor = '#065F46';
+    statusLabel = 'Great level';
+    statusMessage = info.enough;
   } else if (isHigh) {
-    statusIcon = <AlertTriangle size={14} color="#EF4444" />;
+    statusIcon = <AlertTriangle size={13} color="#991B1B" />;
     statusColor = '#EF4444';
+    statusBg = '#FEE2E2';
+    statusTextColor = '#991B1B';
+    statusLabel = 'Too much';
+    statusMessage = info.tooMuch;
+  } else {
+    statusColor = accentColor;
+    statusBg = '#F3F4F6';
+    statusTextColor = '#374151';
+    statusLabel = 'Building up';
+    statusMessage = info.enough;
   }
 
   const displayCurrent = current < 1 ? current.toFixed(2) : current < 10 ? current.toFixed(1) : Math.round(current);
@@ -68,30 +91,30 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
 
   return (
     <Pressable
-      onPress={() => setExpanded(!expanded)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setExpanded(!expanded);
+      }}
       className="bg-white dark:bg-gray-900 rounded-xl mb-2 overflow-hidden"
     >
-      <View className="flex-row items-center p-3">
+      {/* Header */}
+      <View className="flex-row items-center px-3 pt-3 pb-2">
         <View className="flex-1">
           <View className="flex-row items-center">
             <Text className="text-sm font-semibold text-gray-900 dark:text-white">{info.name}</Text>
-            {statusIcon && <View className="ml-2">{statusIcon}</View>}
+            {statusIcon && <View className="ml-1.5">{statusIcon}</View>}
           </View>
-          <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <Text className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             {displayCurrent} / {displayGoal} {info.unit}
           </Text>
         </View>
-
-        <View className="items-end mr-2">
-          <Text className="text-lg font-bold" style={{ color: statusColor }}>
-            {Math.round(percentage)}%
-          </Text>
-        </View>
-
+        <Text className="text-xl font-bold mr-2" style={{ color: statusColor }}>
+          {Math.round(percentage)}%
+        </Text>
         {expanded ? (
-          <ChevronUp size={18} color="#9CA3AF" />
+          <ChevronUp size={16} color="#9CA3AF" />
         ) : (
-          <ChevronDown size={18} color="#9CA3AF" />
+          <ChevronDown size={16} color="#9CA3AF" />
         )}
       </View>
 
@@ -106,18 +129,25 @@ function NutrientRow({ nutrientKey, current, goal, accentColor }: NutrientRowPro
         />
       </View>
 
-      {expanded && (
-        <View
-          className="px-3 pb-3 border-t border-gray-100 dark:border-gray-800 pt-3"
-        >
-          <View className="flex-row items-start">
-            <Info size={14} color="#6B7280" />
-            <Text className="text-xs text-gray-600 dark:text-gray-400 ml-2 flex-1">
-              {info.description}
-            </Text>
-          </View>
+      {/* Status message — always visible */}
+      <View className="mx-3 mb-2 rounded-lg px-3 py-2 flex-row items-start" style={{ backgroundColor: statusBg }}>
+        <View className="mt-0.5 mr-2">{statusIcon}</View>
+        <View className="flex-1">
+          <Text className="text-xs font-bold mb-0.5" style={{ color: statusTextColor }}>{statusLabel}</Text>
+          <Text className="text-xs leading-4" style={{ color: statusTextColor }}>{statusMessage}</Text>
+        </View>
+      </View>
 
-          <View className="flex-row mt-3">
+      {/* Description — always visible */}
+      <View className="mx-3 mb-3 flex-row items-start">
+        <Info size={12} color="#9CA3AF" style={{ marginTop: 1 }} />
+        <Text className="text-xs text-gray-500 dark:text-gray-400 ml-1.5 flex-1 leading-4">{info.description}</Text>
+      </View>
+
+      {/* Expanded: numeric breakdown */}
+      {expanded && (
+        <View className="px-3 pb-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <View className="flex-row">
             <View className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mr-1">
               <Text className="text-xs text-gray-500 dark:text-gray-400">Current</Text>
               <Text className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -529,9 +559,7 @@ export default function MicronutrientsScreen() {
                 About Micronutrients
               </Text>
               <Text className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                Micronutrients are vitamins and minerals your body needs in small amounts.
-                They're essential for energy production, immune function, blood clotting,
-                and other vital processes. Tap any nutrient to learn more.
+                Each nutrient shows what happens when you have too little, the right amount, or too much. Tap any nutrient to see your exact numbers.
               </Text>
               <Text className="text-xs text-blue-500 dark:text-blue-400 mt-1">
                 Daily values are based on FDA and NIH Dietary Reference Intakes for adults.
