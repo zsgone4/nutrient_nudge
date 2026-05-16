@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed, BookmarkPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { SavedMeal } from '@/lib/state/nutrition-store';
@@ -16,11 +16,14 @@ export default function SavedMealsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { savedMeals, isLoading, updateMeal, deleteMeal } = useSavedMeals();
+  const { savedMeals, isLoading, createMeal, updateMeal, deleteMeal } = useSavedMeals();
 
   const [editingMeal, setEditingMeal] = useState<SavedMeal | null>(null);
   const [editName, setEditName] = useState('');
   const [editEntries, setEditEntries] = useState<{ food: Food; servings: number }[]>([]);
+
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [createName, setCreateName] = useState('');
 
   const openEdit = useCallback((meal: SavedMeal) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -85,6 +88,20 @@ export default function SavedMealsScreen() {
     closeEdit();
   }, [editingMeal, router, closeEdit]);
 
+  const handleCreateMeal = useCallback(async () => {
+    const name = createName.trim();
+    if (!name) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await createMeal.mutateAsync({ name, entries: [] });
+    } catch {
+      Alert.alert('Error', 'Failed to create meal. Please try again.');
+      return;
+    }
+    setCreateModalVisible(false);
+    setCreateName('');
+  }, [createName, createMeal]);
+
   const mealCalories = useCallback((meal: SavedMeal) =>
     Math.round(meal.entries.reduce((sum, e) => sum + e.food.macros.calories * e.servings, 0)),
   []);
@@ -105,6 +122,13 @@ export default function SavedMealsScreen() {
             {savedMeals.length} {savedMeals.length === 1 ? 'meal' : 'meals'} saved
           </Text>
         </View>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCreateName(''); setCreateModalVisible(true); }}
+          className="flex-row items-center bg-emerald-500 rounded-full px-3 h-9"
+        >
+          <Plus size={16} color="#ffffff" />
+          <Text className="text-sm font-semibold text-white ml-1">New Meal</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -319,6 +343,63 @@ export default function SavedMealsScreen() {
                       <Check size={18} color="#ffffff" />
                       <Text className="text-white font-bold text-base ml-2">Save Changes</Text>
                     </>
+                  )}
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Create New Meal Modal */}
+      <Modal
+        visible={createModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCreateModalVisible(false)}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 24 }}
+            onPress={() => setCreateModalVisible(false)}
+          >
+            <Pressable onPress={() => {}} className="bg-white dark:bg-gray-900 rounded-2xl p-6">
+              <View className="flex-row items-center mb-4">
+                <View className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center mr-3">
+                  <BookmarkPlus size={20} color="#10B981" />
+                </View>
+                <Text className="text-lg font-bold text-gray-900 dark:text-white">New Saved Meal</Text>
+              </View>
+              <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                Give your meal a name. You can add ingredients after creating it.
+              </Text>
+              <TextInput
+                value={createName}
+                onChangeText={setCreateName}
+                placeholder="e.g. Morning Oats, Post-Gym Shake"
+                placeholderTextColor="#9CA3AF"
+                className="bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-base mb-4"
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleCreateMeal}
+              />
+              <View className="flex-row gap-3">
+                <Pressable
+                  onPress={() => setCreateModalVisible(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 items-center"
+                >
+                  <Text className="text-sm font-semibold text-gray-600 dark:text-gray-400">Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleCreateMeal}
+                  disabled={!createName.trim() || createMeal.isPending}
+                  className="flex-1 py-3 rounded-xl bg-emerald-500 items-center"
+                  style={{ opacity: !createName.trim() || createMeal.isPending ? 0.45 : 1 }}
+                >
+                  {createMeal.isPending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text className="text-sm font-semibold text-white">Create Meal</Text>
                   )}
                 </Pressable>
               </View>

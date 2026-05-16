@@ -154,9 +154,10 @@ export default function MealDetailScreen() {
           {entries.length > 0 && (
             <Pressable
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMealNameInput(MEAL_LABELS[mealType]); setSaveModalVisible(true); }}
-              className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center"
+              className="flex-row items-center bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-3 h-10"
             >
-              <Bookmark size={18} color="#10B981" />
+              <Bookmark size={16} color="#10B981" />
+              <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-1.5">Save Meal</Text>
             </Pressable>
           )}
           <Pressable
