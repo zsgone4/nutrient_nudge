@@ -9,6 +9,8 @@ import { View } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/lib/state/user-store';
 
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
@@ -23,7 +25,51 @@ function RootLayoutNav({ colorScheme }: { colorScheme: 'light' | 'dark' | null |
   const router = useRouter();
   const hasSignedUp = useUserStore(s => s.hasSignedUp);
   const hasHydrated = useUserStore(s => s._hasHydrated);
+  const userId = useUserStore(s => s.userId);
+  const userEmail = useUserStore(s => s.userEmail);
+  const userName = useUserStore(s => s.userName);
+  const userAge = useUserStore(s => s.userAge);
+  const userGender = useUserStore(s => s.userGender);
+  const userTrainingGoal = useUserStore(s => s.userTrainingGoal);
+  const userGoals = useUserStore(s => s.userGoals);
+  const setSignedUp = useUserStore(s => s.setSignedUp);
   const didRedirect = useRef(false);
+
+  // On startup, verify the stored userId still exists in the DB.
+  // If the DB was reset, re-register automatically using locally-stored profile data.
+  useEffect(() => {
+    if (!hasHydrated || !hasSignedUp || !userId || !userEmail) return;
+
+    fetch(`${BACKEND_URL}/api/signup/${userId}`)
+      .then(async (res) => {
+        if (res.status !== 404) return;
+        const age = parseInt(userAge, 10);
+        const recoverRes = await fetch(`${BACKEND_URL}/api/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            name: userName || 'User',
+            age: isNaN(age) ? 25 : age,
+            gender: userGender || 'prefer-not-to-say',
+            trainingGoal: userTrainingGoal || undefined,
+            goals: userGoals.length > 0 ? userGoals : ['general'],
+            agreedToPolicy: true,
+          }),
+        });
+        const data = await recoverRes.json();
+        if (data.user?.id) {
+          setSignedUp(data.user.id, userEmail, {
+            userName,
+            userAge,
+            userGender,
+            userTrainingGoal,
+            userGoals,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [hasHydrated, hasSignedUp, userId]);
 
   useEffect(() => {
     if (!hasHydrated || didRedirect.current) return;

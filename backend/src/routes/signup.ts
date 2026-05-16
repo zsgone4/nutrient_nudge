@@ -14,6 +14,17 @@ const signupSchema = z.object({
   agreedToPolicy: z.literal(true, { message: "You must agree to the policy" }),
 });
 
+// Check if a user exists by ID
+signupRouter.get("/:id", async (c) => {
+  const { id } = c.req.param();
+  const user = await db.signup.findUnique({
+    where: { id },
+    select: { id: true, email: true, name: true },
+  });
+  if (!user) return c.json({ error: "User not found" }, 404);
+  return c.json({ user });
+});
+
 signupRouter.post("/", async (c) => {
   try {
     const body = await c.req.json();
@@ -25,9 +36,10 @@ signupRouter.post("/", async (c) => {
 
     const { email, name, age, gender, trainingGoal, goals, agreedToPolicy } = result.data;
 
+    // If user already exists by email, return them (supports recovery flow)
     const existing = await db.signup.findUnique({ where: { email } });
     if (existing) {
-      return c.json({ error: "This email is already registered" }, 409);
+      return c.json({ success: true, user: existing }, 200);
     }
 
     const signup = await db.signup.create({
