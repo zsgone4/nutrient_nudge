@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
+import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';
@@ -200,13 +201,11 @@ export default function AddFoodScreen() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addFoodEntry = useNutritionStore(s => s.addFoodEntry);
-  const addItemToSavedMeal = useNutritionStore(s => s.addItemToSavedMeal);
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const logs = useNutritionStore(s => s.logs);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
-  const savedMeals = useNutritionStore(s => s.savedMeals);
-  const deleteSavedMeal = useNutritionStore(s => s.deleteSavedMeal);
   const userId = useUserStore(s => s.userId);
+  const { savedMeals, updateMeal, deleteMeal } = useSavedMeals();
 
   // Collect unique foods from past days, newest day first, in log order within each day
   const recentFoods = useMemo(() => {
@@ -265,11 +264,15 @@ export default function AddFoodScreen() {
     router.back();
   }, [addFoodEntry, mealType, logs, selectedDate, userId, dailyGoals, router]);
 
-  const handleAddFood = useCallback(() => {
+  const handleAddFood = useCallback(async () => {
     if (!selectedFood) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (savedMealId) {
-      addItemToSavedMeal(savedMealId, selectedFood, servings);
+      const currentMeal = savedMeals.find(m => m.id === savedMealId);
+      if (currentMeal) {
+        const newEntries = [...currentMeal.entries, { food: selectedFood, servings }];
+        await updateMeal.mutateAsync({ id: savedMealId, name: currentMeal.name, entries: newEntries });
+      }
     } else {
       addFoodEntry(selectedFood, servings, mealType);
       setTimeout(() => {
@@ -278,7 +281,7 @@ export default function AddFoodScreen() {
       }, 50);
     }
     router.back();
-  }, [selectedFood, servings, mealType, addFoodEntry, addItemToSavedMeal, savedMealId, router, userId, selectedDate, logs, dailyGoals]);
+  }, [selectedFood, servings, mealType, addFoodEntry, savedMealId, savedMeals, updateMeal, router, userId, selectedDate, logs, dailyGoals]);
 
   const adjustServings = useCallback((delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -630,7 +633,7 @@ export default function AddFoodScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     Alert.alert('Delete Meal', `Remove "${meal.name}" from saved meals?`, [
                       { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => deleteSavedMeal(meal.id) },
+                      { text: 'Delete', style: 'destructive', onPress: () => deleteMeal.mutate(meal.id) },
                     ]);
                   }}
                   className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 active:opacity-70"
