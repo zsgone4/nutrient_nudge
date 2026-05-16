@@ -5,30 +5,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X, Bookmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
-import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
+import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
+import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
 import { MealType, FoodLogEntry, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
-
-async function syncSavedMealToBackend(userId: string, meal: SavedMeal) {
-  try {
-    await fetch(`${BACKEND_URL}/api/saved-meals`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: meal.id,
-        userId,
-        name: meal.name,
-        items: meal.entries.map(e => ({
-          foodData: JSON.stringify(e.food),
-          servings: e.servings,
-        })),
-      }),
-    });
-  } catch {}
-}
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast',
@@ -56,8 +37,8 @@ export default function MealDetailScreen() {
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
   const removeFoodEntry = useNutritionStore(s => s.removeFoodEntry);
   const updateFoodEntry = useNutritionStore(s => s.updateFoodEntry);
-  const saveMeal = useNutritionStore(s => s.saveMeal);
   const userId = useUserStore(s => s.userId);
+  const { createMeal } = useSavedMeals();
 
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [mealNameInput, setMealNameInput] = useState('');
@@ -136,23 +117,20 @@ export default function MealDetailScreen() {
     router.push({ pathname: '/add-food', params: { mealType } });
   }, [router, mealType]);
 
-  const handleSaveMeal = useCallback(() => {
+  const handleSaveMeal = useCallback(async () => {
     const name = mealNameInput.trim();
     if (!name || entries.length === 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const mealEntries = entries.map(e => ({ food: e.food, servings: e.servings }));
-    saveMeal(name, mealEntries);
-    // Sync to backend (fire-and-forget) — get the new meal ID from the store after update
-    setTimeout(() => {
-      if (userId) {
-        const store = useNutritionStore.getState();
-        const newMeal = store.savedMeals[0];
-        if (newMeal && newMeal.name === name) syncSavedMealToBackend(userId, newMeal);
-      }
-    }, 50);
+    try {
+      await createMeal.mutateAsync({ name, entries: mealEntries });
+    } catch {
+      Alert.alert('Error', 'Failed to save meal. Please try again.');
+      return;
+    }
     setSaveModalVisible(false);
     setMealNameInput('');
-  }, [mealNameInput, entries, saveMeal, userId]);
+  }, [mealNameInput, entries, createMeal]);
 
   return (
     <View className="flex-1 bg-gray-50 dark:bg-black" style={{ paddingTop: insets.top }}>

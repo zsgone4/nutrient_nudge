@@ -1,51 +1,22 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput, Modal,
-  Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, ChevronRight, UtensilsCrossed } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
-import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
-import { useUserStore } from '@/lib/state/user-store';
+import { SavedMeal } from '@/lib/state/nutrition-store';
+import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
 import { Food } from '@/lib/types/nutrition';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
-
-async function syncMealToBackend(userId: string, meal: SavedMeal) {
-  try {
-    await fetch(`${BACKEND_URL}/api/saved-meals`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: meal.id,
-        userId,
-        name: meal.name,
-        items: meal.entries.map(e => ({
-          foodData: JSON.stringify(e.food),
-          servings: e.servings,
-        })),
-      }),
-    });
-  } catch {}
-}
-
-async function deleteMealFromBackend(id: string) {
-  try {
-    await fetch(`${BACKEND_URL}/api/saved-meals/${id}`, { method: 'DELETE' });
-  } catch {}
-}
 
 export default function SavedMealsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const userId = useUserStore(s => s.userId);
 
-  const savedMeals = useNutritionStore(s => s.savedMeals);
-  const updateSavedMeal = useNutritionStore(s => s.updateSavedMeal);
-  const deleteSavedMeal = useNutritionStore(s => s.deleteSavedMeal);
+  const { savedMeals, isLoading, updateMeal, deleteMeal } = useSavedMeals();
 
   const [editingMeal, setEditingMeal] = useState<SavedMeal | null>(null);
   const [editName, setEditName] = useState('');
@@ -64,16 +35,19 @@ export default function SavedMealsScreen() {
     setEditEntries([]);
   }, []);
 
-  const handleSaveEdit = useCallback(() => {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingMeal) return;
     const name = editName.trim();
     if (!name) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const updatedMeal: SavedMeal = { ...editingMeal, name, entries: editEntries };
-    updateSavedMeal(editingMeal.id, name, editEntries);
-    if (userId) syncMealToBackend(userId, updatedMeal);
+    try {
+      await updateMeal.mutateAsync({ id: editingMeal.id, name, entries: editEntries });
+    } catch {
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      return;
+    }
     closeEdit();
-  }, [editingMeal, editName, editEntries, updateSavedMeal, userId, closeEdit]);
+  }, [editingMeal, editName, editEntries, updateMeal, closeEdit]);
 
   const handleDeleteMeal = useCallback((meal: SavedMeal) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -85,14 +59,11 @@ export default function SavedMealsScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            deleteSavedMeal(meal.id);
-            if (userId) deleteMealFromBackend(meal.id);
-          },
+          onPress: () => deleteMeal.mutate(meal.id),
         },
       ]
     );
-  }, [deleteSavedMeal, userId]);
+  }, [deleteMeal]);
 
   const adjustServings = useCallback((index: number, delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -136,7 +107,11 @@ export default function SavedMealsScreen() {
         </View>
       </View>
 
-      {savedMeals.length === 0 ? (
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#10B981" />
+        </View>
+      ) : savedMeals.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <View className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full items-center justify-center mb-4">
             <UtensilsCrossed size={36} color="#10B981" />
@@ -180,7 +155,6 @@ export default function SavedMealsScreen() {
                     {meal.entries.length} {meal.entries.length === 1 ? 'item' : 'items'} · P: {totalProtein}g · C: {totalCarbs}g · F: {totalFat}g
                   </Text>
 
-                  {/* Item preview */}
                   {meal.entries.slice(0, 3).map((entry, i) => (
                     <View key={i} className="flex-row items-center py-1">
                       <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2" />
@@ -334,12 +308,18 @@ export default function SavedMealsScreen() {
               <View className="px-5 pt-3">
                 <Pressable
                   onPress={handleSaveEdit}
-                  disabled={!editName.trim() || editEntries.length === 0}
+                  disabled={!editName.trim() || editEntries.length === 0 || updateMeal.isPending}
                   className="bg-emerald-500 rounded-2xl py-4 flex-row items-center justify-center active:opacity-80"
-                  style={{ opacity: (!editName.trim() || editEntries.length === 0) ? 0.45 : 1 }}
+                  style={{ opacity: (!editName.trim() || editEntries.length === 0 || updateMeal.isPending) ? 0.45 : 1 }}
                 >
-                  <Check size={18} color="#ffffff" />
-                  <Text className="text-white font-bold text-base ml-2">Save Changes</Text>
+                  {updateMeal.isPending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Check size={18} color="#ffffff" />
+                      <Text className="text-white font-bold text-base ml-2">Save Changes</Text>
+                    </>
+                  )}
                 </Pressable>
               </View>
             </Pressable>

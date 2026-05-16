@@ -325,7 +325,6 @@ export const useNutritionStore = create<NutritionState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         logs: state.logs,
-        savedMeals: state.savedMeals,
         dailyGoals: state.dailyGoals,
         userProfile: state.userProfile,
         macroGoalsOverridden: state.macroGoalsOverridden,
