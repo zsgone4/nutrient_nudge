@@ -5,10 +5,30 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2, Edit3, Minus, Check, X, Bookmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
-import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
 import { MealType, FoodLogEntry, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+
+async function syncSavedMealToBackend(userId: string, meal: SavedMeal) {
+  try {
+    await fetch(`${BACKEND_URL}/api/saved-meals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: meal.id,
+        userId,
+        name: meal.name,
+        items: meal.entries.map(e => ({
+          foodData: JSON.stringify(e.food),
+          servings: e.servings,
+        })),
+      }),
+    });
+  } catch {}
+}
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast',
@@ -120,10 +140,19 @@ export default function MealDetailScreen() {
     const name = mealNameInput.trim();
     if (!name || entries.length === 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    saveMeal(name, entries.map(e => ({ food: e.food, servings: e.servings })));
+    const mealEntries = entries.map(e => ({ food: e.food, servings: e.servings }));
+    saveMeal(name, mealEntries);
+    // Sync to backend (fire-and-forget) — get the new meal ID from the store after update
+    setTimeout(() => {
+      if (userId) {
+        const store = useNutritionStore.getState();
+        const newMeal = store.savedMeals[0];
+        if (newMeal && newMeal.name === name) syncSavedMealToBackend(userId, newMeal);
+      }
+    }, 50);
     setSaveModalVisible(false);
     setMealNameInput('');
-  }, [mealNameInput, entries, saveMeal]);
+  }, [mealNameInput, entries, saveMeal, userId]);
 
   return (
     <View className="flex-1 bg-gray-50 dark:bg-black" style={{ paddingTop: insets.top }}>

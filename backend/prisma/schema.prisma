@@ -23,6 +23,7 @@ model Signup {
   userProfile      UserProfile?
   foodLogEntries   FoodLogEntry[]
   nutrientScores   NutrientScore[]
+  savedMeals       SavedMeal[]
 }
 
 model UserProfile {
@@ -109,6 +110,24 @@ model NutrientScore {
   score            Float    // 0-100 score based on micronutrient completeness
   micronutrients   String   // JSON string with detailed breakdown of micronutrient coverage
   createdAt        DateTime @default(now())
-  
+
   @@unique([userId, date])
+}
+
+model SavedMeal {
+  id          String          @id
+  userId      String
+  user        Signup          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  items       SavedMealItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model SavedMealItem {
+  id          String    @id @default(cuid())
+  savedMealId String
+  savedMeal   SavedMeal @relation(fields: [savedMealId], references: [id], onDelete: Cascade)
+  foodData    String    // JSON snapshot of Food object
+  servings    Float
 }

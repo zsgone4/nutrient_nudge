@@ -130,6 +130,8 @@ interface NutritionState {
 
   // Saved meal actions
   saveMeal: (name: string, entries: { food: Food; servings: number }[]) => void;
+  updateSavedMeal: (id: string, name: string, entries: { food: Food; servings: number }[]) => void;
+  addItemToSavedMeal: (id: string, food: Food, servings: number) => void;
   deleteSavedMeal: (id: string) => void;
 
   // Actions
@@ -163,6 +165,22 @@ export const useNutritionStore = create<NutritionState>()(
       saveMeal: (name, entries) => {
         const meal: SavedMeal = { id: generateId(), name, entries, createdAt: Date.now() };
         set(state => ({ savedMeals: [meal, ...state.savedMeals] }));
+      },
+
+      updateSavedMeal: (id, name, entries) => {
+        set(state => ({
+          savedMeals: state.savedMeals.map(m =>
+            m.id === id ? { ...m, name, entries } : m
+          ),
+        }));
+      },
+
+      addItemToSavedMeal: (id, food, servings) => {
+        set(state => ({
+          savedMeals: state.savedMeals.map(m =>
+            m.id === id ? { ...m, entries: [...m.entries, { food, servings }] } : m
+          ),
+        }));
       },
 
       deleteSavedMeal: (id) => {
@@ -307,6 +325,7 @@ export const useNutritionStore = create<NutritionState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         logs: state.logs,
+        savedMeals: state.savedMeals,
         dailyGoals: state.dailyGoals,
         userProfile: state.userProfile,
         macroGoalsOverridden: state.macroGoalsOverridden,

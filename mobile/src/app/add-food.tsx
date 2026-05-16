@@ -176,10 +176,11 @@ export default function AddFoodScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const params = useLocalSearchParams<{ mealType?: string; foodId?: string }>();
+  const params = useLocalSearchParams<{ mealType?: string; foodId?: string; savedMealId?: string }>();
 
   const mealType = (params.mealType as MealType) || 'snacks';
   const preselectedFoodId = params.foodId;
+  const savedMealId = params.savedMealId ?? null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<Food | null>(
@@ -199,6 +200,7 @@ export default function AddFoodScreen() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addFoodEntry = useNutritionStore(s => s.addFoodEntry);
+  const addItemToSavedMeal = useNutritionStore(s => s.addItemToSavedMeal);
   const selectedDate = useNutritionStore(s => s.selectedDate);
   const logs = useNutritionStore(s => s.logs);
   const dailyGoals = useNutritionStore(s => s.dailyGoals);
@@ -266,14 +268,17 @@ export default function AddFoodScreen() {
   const handleAddFood = useCallback(() => {
     if (!selectedFood) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addFoodEntry(selectedFood, servings, mealType);
-    // Sync score to backend after store updates (next tick)
-    setTimeout(() => {
-      const updatedEntries = [...(logs[selectedDate] ?? []), { food: selectedFood, servings, mealType, id: '', timestamp: 0, date: selectedDate }];
-      if (userId) syncNutrientScore(userId, selectedDate, updatedEntries, dailyGoals.micros);
-    }, 50);
+    if (savedMealId) {
+      addItemToSavedMeal(savedMealId, selectedFood, servings);
+    } else {
+      addFoodEntry(selectedFood, servings, mealType);
+      setTimeout(() => {
+        const updatedEntries = [...(logs[selectedDate] ?? []), { food: selectedFood, servings, mealType, id: '', timestamp: 0, date: selectedDate }];
+        if (userId) syncNutrientScore(userId, selectedDate, updatedEntries, dailyGoals.micros);
+      }, 50);
+    }
     router.back();
-  }, [selectedFood, servings, mealType, addFoodEntry, router, userId, selectedDate, logs, dailyGoals]);
+  }, [selectedFood, servings, mealType, addFoodEntry, addItemToSavedMeal, savedMealId, router, userId, selectedDate, logs, dailyGoals]);
 
   const adjustServings = useCallback((delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -377,7 +382,7 @@ export default function AddFoodScreen() {
             <ChevronLeft size={24} color="#6B7280" />
           </Pressable>
           <Text className="flex-1 text-lg font-semibold text-gray-900 dark:text-white text-center mr-8">
-            Add to {MEAL_LABELS[mealType]}
+            {savedMealId ? 'Add to Saved Meal' : `Add to ${MEAL_LABELS[mealType]}`}
           </Text>
         </View>
 
@@ -539,7 +544,7 @@ export default function AddFoodScreen() {
           >
             <Check size={20} color="#ffffff" />
             <Text className="text-white font-semibold text-base ml-2">
-              Add {scaledMacros.calories} calories
+              {savedMealId ? `Add to Meal (${scaledMacros.calories} kcal)` : `Add ${scaledMacros.calories} calories`}
             </Text>
           </Pressable>
         </View>
@@ -568,7 +573,7 @@ export default function AddFoodScreen() {
             <ChevronLeft size={24} color="#6B7280" />
           </Pressable>
           <Text className="flex-1 text-lg font-semibold text-gray-900 dark:text-white text-center">
-            Add to {MEAL_LABELS[mealType]}
+            {savedMealId ? 'Add to Saved Meal' : `Add to ${MEAL_LABELS[mealType]}`}
           </Text>
           <Pressable
             onPress={() => { setBarcodeError(null); setBarcodeInput(''); setShowBarcodeModal(true); }}
