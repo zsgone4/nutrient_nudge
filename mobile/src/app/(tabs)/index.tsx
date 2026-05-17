@@ -7,6 +7,7 @@ import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell, ChevronLeft, ChevronRigh
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { useUserStore } from '@/lib/state/user-store';
 import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComponents';
 import { MealType, Macronutrients, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
 import { useNotifications } from '@/lib/hooks/useNotifications';
@@ -51,6 +52,8 @@ export default function DashboardScreen() {
   const fiberGoal = useNutritionStore(s => s.dailyGoals.macros.fiber);
   const sugarGoal = useNutritionStore(s => s.dailyGoals.macros.sugar);
   const entries = useNutritionStore(s => s.logs[s.selectedDate] ?? EMPTY_ENTRIES);
+  const userGender = useUserStore(s => s.userGender);
+  const nutritionistName = userGender === 'female' ? 'Nicole' : 'Noah';
 
   const [zachMessage, setZachMessage] = useState<string | null>(null);
   const [zachDeficiencies, setZachDeficiencies] = useState<Deficiency[]>([]);
@@ -89,7 +92,7 @@ export default function DashboardScreen() {
         setZachDeficiencies(data.deficiencies ?? []);
       }
     } catch {
-      // silently fail — Zach uses fallback message
+      // silently fail — nutritionist uses fallback message
     } finally {
       setZachLoading(false);
     }
@@ -261,7 +264,7 @@ export default function DashboardScreen() {
               <Text style={{ fontSize: 20 }}>⚡</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-base font-bold text-gray-900 dark:text-white">Zach</Text>
+              <Text className="text-base font-bold text-gray-900 dark:text-white">{nutritionistName}</Text>
               <Text className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">AI Nutritionist</Text>
             </View>
             {entries.length > 0 && (
@@ -333,7 +336,7 @@ export default function DashboardScreen() {
             </View>
           ) : (
             <Text className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              Tap refresh to get Zach's personalised advice on today's nutrition. 💪
+              Tap refresh to get {nutritionistName}'s personalised advice on today's nutrition. 💪
             </Text>
           )}
         </View>
