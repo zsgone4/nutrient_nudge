@@ -207,7 +207,7 @@ export default function AddFoodScreen() {
   const userId = useUserStore(s => s.userId);
   const { savedMeals, updateMeal, deleteMeal } = useSavedMeals();
 
-  // Collect unique foods from past days, newest day first, in log order within each day
+  // Collect unique foods from past days for this meal type, newest day first
   const recentFoods = useMemo(() => {
     const pastDates = Object.keys(logs)
       .filter(d => d < selectedDate)
@@ -216,14 +216,14 @@ export default function AddFoodScreen() {
     const result: Food[] = [];
     for (const date of pastDates) {
       for (const entry of (logs[date] ?? [])) {
-        if (!seenIds.has(entry.food.id)) {
+        if (entry.mealType === mealType && !seenIds.has(entry.food.id)) {
           seenIds.add(entry.food.id);
           result.push(entry.food);
         }
       }
     }
     return result;
-  }, [logs, selectedDate]);
+  }, [logs, selectedDate, mealType]);
 
   const filteredFoods = useMemo(() => {
     if (!searchQuery.trim()) return recentFoods;
@@ -661,7 +661,7 @@ export default function AddFoodScreen() {
         ListHeaderComponent={
           !searchQuery.trim() && recentFoods.length > 0 ? (
             <Text className="px-4 pt-3 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-              Recently Added
+              Recent {MEAL_LABELS[mealType]} Foods
             </Text>
           ) : null
         }
@@ -693,9 +693,9 @@ export default function AddFoodScreen() {
           <View className="items-center justify-center py-20">
             {!searchQuery.trim() ? (
               <>
-                <Text className="text-gray-400 dark:text-gray-500 text-base">No previous meals yet</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-base">No recent {MEAL_LABELS[mealType].toLowerCase()} foods</Text>
                 <Text className="text-gray-400 dark:text-gray-500 text-sm mt-1 text-center px-8">
-                  Search above to find foods — they'll appear here after your first day of logging
+                  Foods you log for {MEAL_LABELS[mealType].toLowerCase()} will appear here for quick re-adding
                 </Text>
               </>
             ) : (
