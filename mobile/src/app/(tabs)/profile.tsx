@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator, InputAccessoryView, Keyboard, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw, UtensilsCrossed } from 'lucide-react-native';
+import { User, Ruler, Weight, Calendar, Activity, Target, Check, ChevronDown, BookOpen, Trash2, Settings, Sliders, RotateCcw, UtensilsCrossed, Bell } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore, calculateTDEE, calculateTargetCalories } from '@/lib/state/nutrition-store';
@@ -553,6 +553,21 @@ export default function ProfileScreen() {
               <Text className="text-sm font-medium text-gray-900 dark:text-white">My Saved Meals</Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 Edit, manage and delete your meal templates
+              </Text>
+            </View>
+            <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
+          </Pressable>
+
+          {/* Reminders */}
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/notification-settings'); }}
+            className="flex-row items-center bg-white dark:bg-gray-900 rounded-xl p-4 mt-3"
+          >
+            <Bell size={18} color="#10B981" />
+            <View className="flex-1 ml-3">
+              <Text className="text-sm font-medium text-gray-900 dark:text-white">Daily Reminders</Text>
+              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Set times to track meals & check your score
               </Text>
             </View>
             <ChevronDown size={16} color="#9CA3AF" style={{ transform: [{ rotate: '-90deg' }] }} />
