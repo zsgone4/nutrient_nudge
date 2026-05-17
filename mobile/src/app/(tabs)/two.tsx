@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2, Calculator } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2, Calculator, Moon, Zap, Heart, Shield, Leaf } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
 
@@ -32,6 +32,56 @@ const CATEGORY_COLORS: Record<MicroCategory, { bg: string; text: string; accent:
   'Major Minerals': { bg: '#E0E7FF', text: '#3730A3', accent: '#6366F1' },
   'Trace Minerals': { bg: '#FCE7F3', text: '#9D174D', accent: '#EC4899' },
 };
+
+function getPillarInsight(avg: number, low: string, mid: string, high: string): string {
+  if (avg < 30) return low;
+  if (avg < 65) return mid;
+  return high;
+}
+
+function buildHealthInsights(
+  totals: { macros: { calories: number; protein: number; carbohydrates: number; fat: number; fiber: number; sugar: number }; micros: Micronutrients },
+  goalMacroProtein: number,
+  goalMicros: Micronutrients,
+) {
+  const pct = (key: keyof Micronutrients) => {
+    const g = goalMicros[key];
+    return g > 0 ? Math.min((totals.micros[key] / g) * 100, 150) : 0;
+  };
+  const protPct = goalMacroProtein > 0 ? Math.min((totals.macros.protein / goalMacroProtein) * 100, 150) : 0;
+
+  const sleepAvg = (pct('magnesium') + pct('calcium') + pct('vitaminB6')) / 3;
+  const perfAvg = (pct('iron') + pct('vitaminB12') + pct('vitaminB3') + protPct) / 4;
+  const skinAvg = (pct('vitaminA') + pct('vitaminC') + pct('vitaminE') + pct('zinc') + pct('vitaminD')) / 5;
+  const longevityAvg = (pct('selenium') + pct('vitaminD') + pct('vitaminK') + pct('calcium')) / 4;
+
+  return {
+    sleep: getPillarInsight(
+      sleepAvg,
+      "Your sleep minerals are low today — boosting magnesium and calcium (think leafy greens, dairy or nuts) can meaningfully improve how quickly you fall asleep and how deeply you rest.",
+      "Your body has a decent foundation for sleep tonight. Magnesium and B6 are building up, which should help you relax and cycle through sleep stages more smoothly.",
+      "Strong magnesium, calcium and B6 today — your nervous system has the minerals it needs to fully unwind. Expect easier sleep onset and more restorative deep sleep tonight.",
+    ),
+    performance: getPillarInsight(
+      perfAvg,
+      "Energy-supporting nutrients like iron and B vitamins are running low — you may notice some afternoon fatigue. Pairing protein with iron-rich foods will help your body bounce back faster.",
+      "You're fuelling a solid base for energy and recovery. Your B vitamins and protein are supporting steady focus and helping your muscles repair after any activity today.",
+      "Excellent fuel today. High B12, B3, iron and protein means your cells are efficiently converting food into energy — expect strong mental clarity, physical stamina and faster muscle recovery.",
+    ),
+    skin: getPillarInsight(
+      skinAvg,
+      "Skin and hormone-supporting nutrients need attention. Vitamins A, C and zinc are key for collagen production and hormone balance — colourful veg and seeds would make a real difference.",
+      "Your skin and hormone nutrients are on a good track. Vitamins A and C are helping maintain your skin barrier and supporting the hormonal signalling that keeps your energy and mood balanced.",
+      "Great levels of vitamins A, C, E, D and zinc today — your skin's collagen production is supported, your hormone pathways are well-nourished, and your immune system is getting a genuine boost.",
+    ),
+    longevity: getPillarInsight(
+      longevityAvg,
+      "Long-term protective nutrients are low today. Vitamin D, K and selenium are your cellular bodyguards — prioritising these consistently is one of the highest-impact things you can do for healthy ageing.",
+      "You're laying a reasonable foundation for long-term health. Consistent intake of vitamin D and selenium like this helps reduce chronic inflammation and supports your body's natural repair systems.",
+      "Outstanding longevity nutrients today. High vitamin D, K, selenium and calcium is actively supporting bone density, reducing oxidative stress, and giving your cells the raw materials for long-term resilience.",
+    ),
+  };
+}
 
 interface NutrientRowProps {
   nutrientKey: keyof Micronutrients;
@@ -256,6 +306,13 @@ export default function MicronutrientsScreen() {
 
     return count > 0 ? Math.round(totalPercentage / count) : 0;
   }, [totals, dailyGoals]);
+
+  const isUndereating = totals.macros.calories < 500;
+
+  const healthInsights = useMemo(
+    () => isUndereating ? null : buildHealthInsights(totals, dailyGoals.macros.protein, dailyGoals.micros),
+    [totals, dailyGoals, isUndereating],
+  );
 
   const weeklyScores = useMemo(() => {
     const result: { date: string; day: string; score: number }[] = [];
@@ -484,6 +541,53 @@ export default function MicronutrientsScreen() {
           <Text className="text-xs text-gray-400 dark:text-gray-500 mt-4">
             Average of daily values met across all micronutrients
           </Text>
+        </View>
+
+        {/* How you should be feeling today */}
+        <View className="mx-4 mt-3 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+          <View className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800 flex-row items-center">
+            <View className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center mr-2.5">
+              <Heart size={14} color="#10B981" />
+            </View>
+            <Text className="text-sm font-bold text-gray-900 dark:text-white">How you should be feeling today</Text>
+          </View>
+
+          {isUndereating ? (
+            <View className="px-4 py-5">
+              <View className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                <Text className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1.5">Log more food to unlock your insights</Text>
+                <Text className="text-xs text-amber-700 dark:text-amber-400 leading-5">
+                  It looks like you've either eaten very little today or haven't logged everything yet. Add more meals so we can show you exactly how today's nutrition is supporting your sleep, energy, skin and long-term health.
+                </Text>
+              </View>
+            </View>
+          ) : healthInsights ? (
+            <>
+              {([
+                { key: 'sleep', label: 'Sleep', icon: <Moon size={15} color="#6366F1" />, color: '#6366F1', insight: healthInsights.sleep },
+                { key: 'performance', label: 'Energy & Recovery', icon: <Zap size={15} color="#F59E0B" />, color: '#F59E0B', insight: healthInsights.performance },
+                { key: 'skin', label: 'Skin & Hormones', icon: <Leaf size={15} color="#10B981" />, color: '#10B981', insight: healthInsights.skin },
+                { key: 'longevity', label: 'Longevity', icon: <Shield size={15} color="#3B82F6" />, color: '#3B82F6', insight: healthInsights.longevity },
+              ] as { key: string; label: string; icon: React.ReactNode; color: string; insight: string }[]).map((pillar, i, arr) => (
+                <View
+                  key={pillar.key}
+                  className="px-4 py-4 flex-row items-start"
+                  style={i < arr.length - 1 ? { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' } : undefined}
+                >
+                  <View
+                    className="w-9 h-9 rounded-xl items-center justify-center mr-3 mt-0.5"
+                    style={{ backgroundColor: pillar.color + '18' }}
+                  >
+                    {pillar.icon}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{pillar.label}</Text>
+                    <Text className="text-xs text-gray-600 dark:text-gray-400 leading-5">{pillar.insight}</Text>
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : null}
         </View>
 
         {/* Legend */}
