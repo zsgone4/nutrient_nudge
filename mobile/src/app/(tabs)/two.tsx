@@ -405,8 +405,14 @@ export default function MicronutrientsScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Section 1 heading */}
+        <View className="px-4 pt-5 pb-2">
+          <Text className="text-xl font-bold text-gray-900 dark:text-white">Your 7-Day Nutrition Streak</Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">See how consistently you're hitting your targets</Text>
+        </View>
+
         {/* Weekly Score Chart */}
-        <View className="mx-4 mt-4 mb-3 rounded-2xl p-4 bg-white dark:bg-gray-900" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+        <View className="mx-4 mb-3 rounded-2xl p-4 bg-white dark:bg-gray-900" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
           <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">7-Day Nutrient Score</Text>
           <View className="flex-row items-end justify-between" style={{ height: 80 }}>
             {weeklyScores.map(({ date, day, score }) => {
@@ -444,9 +450,15 @@ export default function MicronutrientsScreen() {
           </View>
         </View>
 
+        {/* Section 2 heading */}
+        <View className="px-4 pt-4 pb-2">
+          <Text className="text-xl font-bold text-gray-900 dark:text-white">Today's Nutrient Score</Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">How well you've fuelled your body today</Text>
+        </View>
+
         {/* Header Score Card */}
         <View
-          className="mx-4 mt-1 rounded-2xl p-5 shadow-sm"
+          className="mx-4 rounded-2xl p-5 shadow-sm"
           style={{ backgroundColor: getScoreColor(overallScore) + '15', borderWidth: 1.5, borderColor: getScoreColor(overallScore) + '40' }}
         >
           <View className="flex-row items-center justify-between mb-3">
@@ -543,8 +555,14 @@ export default function MicronutrientsScreen() {
           </Text>
         </View>
 
+        {/* Section 3 heading */}
+        <View className="px-4 pt-4 pb-2">
+          <Text className="text-xl font-bold text-gray-900 dark:text-white">Feel the Difference</Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">How today's food shapes your sleep, energy & long-term health</Text>
+        </View>
+
         {/* How you should be feeling today */}
-        <View className="mx-4 mt-3 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+        <View className="mx-4 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
           <View className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800 flex-row items-center">
             <View className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center mr-2.5">
               <Heart size={14} color="#10B981" />
@@ -590,8 +608,14 @@ export default function MicronutrientsScreen() {
           ) : null}
         </View>
 
+        {/* Section 4 heading */}
+        <View className="px-4 pt-4 pb-1">
+          <Text className="text-xl font-bold text-gray-900 dark:text-white">Your Vitamins & Minerals</Text>
+          <Text className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Tap any group to discover exactly what each nutrient does for your body</Text>
+        </View>
+
         {/* Legend */}
-        <View className="flex-row justify-center mt-4 mb-2 px-4 flex-wrap">
+        <View className="flex-row justify-center mt-3 mb-2 px-4 flex-wrap">
           <View className="flex-row items-center mr-4 mb-2">
             <View className="w-3 h-3 rounded-full bg-yellow-500 mr-1.5" />
             <Text className="text-xs text-gray-500 dark:text-gray-400">Low (&lt;30%)</Text>
