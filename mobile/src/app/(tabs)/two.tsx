@@ -1,14 +1,16 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronUp, Info, AlertTriangle, CheckCircle, BookOpen, Share2, Calculator, Moon, Zap, Heart, Shield, Leaf } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
+import Svg, { Path, Circle, Line as SvgLine, Text as SvgText, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
 import { MICRONUTRIENT_INFO, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
+import { useColorScheme } from '@/lib/useColorScheme';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -32,6 +34,141 @@ const CATEGORY_COLORS: Record<MicroCategory, { bg: string; text: string; accent:
   'Major Minerals': { bg: '#E0E7FF', text: '#3730A3', accent: '#6366F1' },
   'Trace Minerals': { bg: '#FCE7F3', text: '#9D174D', accent: '#EC4899' },
 };
+
+function getScoreColor(score: number): string {
+  if (score < 25) return '#EF4444';
+  if (score < 50) return '#F59E0B';
+  if (score < 75) return '#10B981';
+  return '#059669';
+}
+
+type TrendPoint = { date: string; day: string; score: number };
+
+function TrendChart({ scores, selectedDate }: { scores: TrendPoint[]; selectedDate: string }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  // card mx-4 (32px) + card px-4 (32px) = 64px total horizontal offset
+  const chartWidth = screenWidth - 64;
+  const CHART_H = 118;
+  const PAD_TOP = 22;
+  const PAD_BOT = 18;
+  const PAD_LR = 8;
+  const drawW = chartWidth - PAD_LR * 2;
+  const drawH = CHART_H - PAD_TOP - PAD_BOT;
+  const n = scores.length;
+
+  const pts = scores.map((s, i) => ({
+    x: PAD_LR + (n > 1 ? (i / (n - 1)) * drawW : drawW / 2),
+    y: s.score > 0 ? PAD_TOP + (1 - s.score / 100) * drawH : PAD_TOP + drawH,
+    score: s.score,
+    day: s.day,
+    date: s.date,
+  }));
+
+  const linePts = pts.filter(p => p.score > 0);
+
+  const buildCurvePath = (points: typeof pts): string => {
+    if (points.length < 2) return points.length === 1 ? `M ${points[0].x} ${points[0].y}` : '';
+    return points.reduce((acc, pt, i) => {
+      if (i === 0) return `M ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+      const prev = points[i - 1];
+      const cpX = ((prev.x + pt.x) / 2).toFixed(1);
+      return `${acc} C ${cpX} ${prev.y.toFixed(1)},${cpX} ${pt.y.toFixed(1)},${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+    }, '');
+  };
+
+  const linePath = buildCurvePath(linePts);
+  const baselineY = (PAD_TOP + drawH).toFixed(1);
+  const areaPath = linePts.length > 1
+    ? `${linePath} L ${linePts[linePts.length - 1].x.toFixed(1)} ${baselineY} L ${linePts[0].x.toFixed(1)} ${baselineY} Z`
+    : '';
+
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const gridLabelColor = isDark ? '#4B5563' : '#D1D5DB';
+
+  return (
+    <Svg width={chartWidth} height={CHART_H}>
+      <Defs>
+        <SvgGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="#10B981" stopOpacity="0.18" />
+          <Stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+        </SvgGradient>
+      </Defs>
+
+      {/* Horizontal grid lines at 25, 50, 75 */}
+      {[25, 50, 75].map(v => {
+        const gy = PAD_TOP + (1 - v / 100) * drawH;
+        return (
+          <React.Fragment key={v}>
+            <SvgLine x1={PAD_LR} y1={gy} x2={chartWidth - PAD_LR} y2={gy} stroke={gridColor} strokeWidth={1} strokeDasharray="3,4" />
+            <SvgText x={PAD_LR} y={gy - 3} fontSize={8} fill={gridLabelColor}>{v}</SvgText>
+          </React.Fragment>
+        );
+      })}
+
+      {/* Gradient area fill */}
+      {areaPath ? <Path d={areaPath} fill="url(#areaFill)" /> : null}
+
+      {/* Trend line */}
+      {linePath ? (
+        <Path d={linePath} stroke="#10B981" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      ) : null}
+
+      {/* Dots + labels */}
+      {pts.map((pt) => {
+        const isToday = pt.date === selectedDate;
+        const hasData = pt.score > 0;
+        const color = hasData ? getScoreColor(pt.score) : (isDark ? '#374151' : '#E5E7EB');
+        const dayLabelColor = isToday && hasData ? color : (isDark ? '#6B7280' : '#9CA3AF');
+
+        return (
+          <React.Fragment key={pt.date}>
+            {/* Score label */}
+            {hasData && (
+              <SvgText
+                x={pt.x} y={pt.y - 10}
+                textAnchor="middle"
+                fontSize={isToday ? 11 : 9}
+                fontWeight={isToday ? '700' : '600'}
+                fill={color}
+              >
+                {pt.score}
+              </SvgText>
+            )}
+
+            {/* Glow for today */}
+            {isToday && hasData && <Circle cx={pt.x} cy={pt.y} r={10} fill={color} opacity={0.15} />}
+
+            {/* Dot */}
+            <Circle
+              cx={pt.x} cy={pt.y}
+              r={isToday ? 6 : hasData ? 4.5 : 3}
+              fill={hasData ? color : 'transparent'}
+              stroke={color}
+              strokeWidth={hasData ? 0 : 1.5}
+            />
+
+            {/* White inner ring for today */}
+            {isToday && hasData && <Circle cx={pt.x} cy={pt.y} r={2.5} fill="white" />}
+
+            {/* Day label */}
+            <SvgText
+              x={pt.x} y={PAD_TOP + drawH + 14}
+              textAnchor="middle"
+              fontSize={10}
+              fontWeight={isToday ? '700' : '400'}
+              fill={dayLabelColor}
+            >
+              {pt.day}
+            </SvgText>
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
+}
 
 function getPillarInsight(avg: number, low: string, mid: string, high: string): string {
   if (avg < 30) return low;
@@ -385,13 +522,6 @@ export default function MicronutrientsScreen() {
     });
   };
 
-  const getScoreColor = (score: number) => {
-    if (score < 25) return '#EF4444';
-    if (score < 50) return '#F59E0B';
-    if (score < 75) return '#10B981';
-    return '#059669';
-  };
-
   const getScoreLabel = (score: number) => {
     if (score < 25) return 'Needs Attention';
     if (score < 50) return 'Getting There';
@@ -413,34 +543,8 @@ export default function MicronutrientsScreen() {
 
         {/* Weekly Score Chart */}
         <View className="mx-4 mb-3 rounded-2xl p-4 bg-white dark:bg-gray-900" style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-          <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">7-Day Nutrient Score</Text>
-          <View className="flex-row items-end justify-between" style={{ height: 80 }}>
-            {weeklyScores.map(({ date, day, score }) => {
-              const barColor = getScoreColor(score);
-              const isSelected = date === selectedDate;
-              const barHeight = score > 0 ? Math.max((score / 100) * 72, 6) : 4;
-              return (
-                <View key={date} className="flex-1 items-center">
-                  <Text className="text-xs font-bold mb-1" style={{ color: isSelected ? barColor : '#9CA3AF' }}>
-                    {score > 0 ? score : ''}
-                  </Text>
-                  <View
-                    style={{
-                      width: 28,
-                      height: barHeight,
-                      backgroundColor: score > 0 ? barColor : '#E5E7EB',
-                      borderRadius: 6,
-                      opacity: isSelected ? 1 : 0.5,
-                    }}
-                  />
-                  <Text className="text-xs mt-1.5" style={{ color: isSelected ? barColor : '#9CA3AF', fontWeight: isSelected ? '700' : '400' }}>
-                    {day}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-          <View className="flex-row justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <TrendChart scores={weeklyScores} selectedDate={selectedDate} />
+          <View className="flex-row justify-between mt-2 pt-3 border-t border-gray-100 dark:border-gray-800">
             {([{ label: 'Excellent', color: '#059669' }, { label: 'Good', color: '#10B981' }, { label: 'Getting There', color: '#F59E0B' }, { label: 'Low', color: '#EF4444' }] as { label: string; color: string }[]).map(({ label, color }) => (
               <View key={label} className="flex-row items-center">
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, marginRight: 4 }} />
