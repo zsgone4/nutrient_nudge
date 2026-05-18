@@ -100,19 +100,44 @@ export function useSavedMeals() {
       name: string;
       entries: { food: Food; servings: number }[];
     }) => {
+      console.log('[SaveMeal] starting, userId:', userId);
       if (!userId) throw new Error('Not signed in');
+
+      // Proactively verify userId is still valid before saving
+      let activeUserId = userId;
+      const checkRes = await fetch(`${BACKEND_URL}/api/signup/${userId}`);
+      console.log('[SaveMeal] userId check status:', checkRes.status);
+      if (checkRes.status === 404) {
+        console.log('[SaveMeal] userId invalid, recovering...');
+        const recovered = await recoverUser();
+        if (!recovered) throw new Error('Failed to save meal');
+        activeUserId = recovered;
+        console.log('[SaveMeal] recovered to:', activeUserId);
+      }
+
       const id = generateId();
-      let res = await saveMealRequest(userId, id, name, entries);
+      let res = await saveMealRequest(activeUserId, id, name, entries);
+      console.log('[SaveMeal] response status:', res.status);
 
       if (res.status === 404) {
         const body = await res.json().catch(() => ({}));
+        console.log('[SaveMeal] 404 body:', JSON.stringify(body));
         if (body.error === 'USER_NOT_FOUND') {
+          console.log('[SaveMeal] unexpected USER_NOT_FOUND, recovering again...');
           const newId = await recoverUser();
-          if (newId) res = await saveMealRequest(newId, id, name, entries);
+          console.log('[SaveMeal] recovered newId:', newId);
+          if (newId) {
+            res = await saveMealRequest(newId, id, name, entries);
+            console.log('[SaveMeal] retry status:', res.status);
+          }
         }
       }
 
-      if (!res.ok) throw new Error('Failed to save meal');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.log('[SaveMeal] FAILED:', res.status, JSON.stringify(errBody));
+        throw new Error('Failed to save meal');
+      }
       return res.json();
     },
     onSuccess: invalidate,
