@@ -4,9 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 
 const aiRouter = new Hono();
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
-const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com";
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 
 const zachSchema = z.object({
   totals: z.object({
@@ -104,26 +102,25 @@ ${deficiencies.length > 0 ? `- Best foods to fix deficiencies: ${deficiencies.ma
 Give personalised feedback: how they're doing vs their goals, what they're missing, and 1-2 specific food recommendations to fill the gaps. Be upbeat, specific, and actionable.`;
 
   try {
-    const response = await fetch(`${ANTHROPIC_BASE_URL}/v1/messages`, {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
+        model: "gpt-4o-mini",
         max_tokens: 256,
         messages: [{ role: "user", content: prompt }],
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    const data = await response.json() as { content: Array<{ type: string; text: string }> };
-    const text = data.content.find(b => b.type === "text")?.text ?? "Great work today! Keep logging your meals for personalised insights.";
+    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+    const text = data.choices[0]?.message?.content ?? "Great work today! Keep logging your meals for personalised insights.";
 
     return c.json({ message: text, deficiencies });
   } catch (err) {
