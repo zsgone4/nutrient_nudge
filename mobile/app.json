@@ -3,14 +3,14 @@
     "name": "Nutrient Nudge",
     "slug": "nutrient-nudge",
     "scheme": "vibecode",
-    "version": "5",
+    "version": "6",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vibecode.nutrientnudge-9lzdjs",
-      "buildNumber": "11",
+      "buildNumber": "12",
       "infoPlist": {}
     },
     "android": {
