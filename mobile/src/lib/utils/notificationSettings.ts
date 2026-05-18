@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 export const NOTIFICATION_SETTINGS_KEY = 'notification_settings_v2';
 
@@ -28,6 +30,66 @@ export const DEFAULT_SETTINGS: NotificationSettings = {
   reminders: DEFAULT_REMINDERS,
 };
 
+const REMINDER_MESSAGES: Record<string, string[]> = {
+  morning: [
+    "Log your breakfast — kickstart your nutrient score ✨",
+    "Start the day strong — track breakfast to fuel your goals 🌅",
+    "Morning check-in! Log breakfast for the best nutrient insights ☀️",
+  ],
+  afternoon: [
+    "Lunchtime! Keep your nutrient score on track 💪",
+    "Log your lunch now for better daily insights 🥗",
+    "Halfway through the day — log your meals and stay on target 🎯",
+  ],
+  evening: [
+    "Log dinner & check your nutrient score 🌙",
+    "Evening check-in — how did you do today? 🏆",
+    "Don't forget to log dinner and review your daily score 🌟",
+  ],
+};
+
+function pickMessage(key: string): string {
+  const msgs = REMINDER_MESSAGES[key] ?? [`Time to log your ${key} meal!`];
+  return msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+export async function requestNotificationPermissions(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  const { status: existing } = await Notifications.getPermissionsAsync();
+  if (existing === 'granted') return true;
+  const { status } = await Notifications.requestPermissionsAsync();
+  return status === 'granted';
+}
+
+export async function scheduleAllNotifications(settings: NotificationSettings): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  // Cancel all existing scheduled notifications first
+  await Notifications.cancelAllScheduledNotificationsAsync();
+
+  if (!settings.enabled) return;
+
+  const hasPermission = await requestNotificationPermissions();
+  if (!hasPermission) return;
+
+  for (const reminder of settings.reminders) {
+    if (!reminder.enabled) continue;
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${reminder.emoji} ${reminder.label} Reminder`,
+        body: pickMessage(reminder.key),
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: reminder.hour,
+        minute: reminder.minute,
+      },
+    });
+  }
+}
+
 export async function loadNotificationSettings(): Promise<NotificationSettings> {
   try {
     const raw = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_KEY);
@@ -47,4 +109,5 @@ export async function loadNotificationSettings(): Promise<NotificationSettings> 
 
 export async function saveNotificationSettings(settings: NotificationSettings): Promise<void> {
   await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+  await scheduleAllNotifications(settings);
 }

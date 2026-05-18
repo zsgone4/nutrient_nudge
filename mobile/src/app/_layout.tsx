@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/lib/state/user-store';
+import { requestNotificationPermissions, loadNotificationSettings, scheduleAllNotifications } from '@/lib/utils/notificationSettings';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -77,6 +78,13 @@ function RootLayoutNav({ colorScheme }: { colorScheme: 'light' | 'dark' | null |
     SplashScreen.hideAsync().catch(() => {});
     if (!hasSignedUp) {
       router.replace('/signup');
+    } else {
+      // Request permission then reschedule any saved reminders
+      requestNotificationPermissions().then(granted => {
+        if (granted) {
+          loadNotificationSettings().then(scheduleAllNotifications).catch(() => {});
+        }
+      }).catch(() => {});
     }
   }, [hasHydrated]);
 

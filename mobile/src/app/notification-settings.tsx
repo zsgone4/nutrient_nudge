@@ -6,6 +6,7 @@ import { X, Bell, BellOff, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Notifications from 'expo-notifications';
 
 import {
   ReminderConfig,
@@ -13,7 +14,19 @@ import {
   DEFAULT_REMINDERS,
   loadNotificationSettings,
   saveNotificationSettings,
+  requestNotificationPermissions,
 } from '@/lib/utils/notificationSettings';
+
+// Show notification banners even when the app is open
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const C = {
   bg: '#0D0D0D',
@@ -51,8 +64,9 @@ export default function NotificationSettingsScreen() {
     setTimeout(() => setSavedFlash(false), 1800);
   };
 
-  const toggleMaster = (val: boolean) => {
+  const toggleMaster = async (val: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (val) await requestNotificationPermissions();
     setMasterEnabled(val);
     persist(val, reminders);
   };
