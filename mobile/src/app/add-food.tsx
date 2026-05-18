@@ -97,9 +97,64 @@ async function fetchProductByBarcode(barcode: string): Promise<Food | null> {
   }
 }
 
-async function saveFoodToBackend(food: Food): Promise<string | null> {
+async function fetchFoodByBarcodeFromBackend(barcode: string): Promise<Food | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/foods/barcode/${barcode}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const f = data.food;
+    if (!f) return null;
+    return {
+      id: f.id,
+      name: f.name,
+      servingSize: Number(f.servingSize),
+      servingUnit: f.servingUnit,
+      category: f.category,
+      macros: {
+        calories: Number(f.calories),
+        protein: Number(f.protein),
+        carbohydrates: Number(f.carbohydrates),
+        fat: Number(f.fat),
+        fiber: Number(f.fiber ?? 0),
+        sugar: Number(f.sugar ?? 0),
+      },
+      micros: {
+        vitaminA: Number(f.vitaminA ?? 0),
+        vitaminB1: Number(f.vitaminB1 ?? 0),
+        vitaminB2: Number(f.vitaminB2 ?? 0),
+        vitaminB3: Number(f.vitaminB3 ?? 0),
+        vitaminB5: Number(f.vitaminB5 ?? 0),
+        vitaminB6: Number(f.vitaminB6 ?? 0),
+        vitaminB7: Number(f.vitaminB7 ?? 0),
+        vitaminB9: Number(f.vitaminB9 ?? 0),
+        vitaminB12: Number(f.vitaminB12 ?? 0),
+        vitaminC: Number(f.vitaminC ?? 0),
+        vitaminD: Number(f.vitaminD ?? 0),
+        vitaminE: Number(f.vitaminE ?? 0),
+        vitaminK: Number(f.vitaminK ?? 0),
+        calcium: Number(f.calcium ?? 0),
+        iron: Number(f.iron ?? 0),
+        magnesium: Number(f.magnesium ?? 0),
+        phosphorus: Number(f.phosphorus ?? 0),
+        potassium: Number(f.potassium ?? 0),
+        sodium: Number(f.sodium ?? 0),
+        zinc: Number(f.zinc ?? 0),
+        copper: Number(f.copper ?? 0),
+        manganese: Number(f.manganese ?? 0),
+        selenium: Number(f.selenium ?? 0),
+        chromium: Number(f.chromium ?? 0),
+        iodine: Number(f.iodine ?? 0),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function saveFoodToBackend(food: Food, barcode?: string): Promise<string | null> {
   try {
     const payload = {
+      ...(barcode && { barcode }),
       name: food.name,
       servingSize: food.servingSize,
       servingUnit: food.servingUnit,
@@ -343,13 +398,21 @@ export default function AddFoodScreen() {
     setBarcodeError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const food = await fetchProductByBarcode(barcode);
+    // Check shared backend database first — avoids redundant API calls and shares community scans
+    let food = await fetchFoodByBarcodeFromBackend(barcode);
+
+    if (!food) {
+      // Not in shared DB yet — fetch from Open Food Facts and save for everyone
+      food = await fetchProductByBarcode(barcode);
+      if (food) {
+        saveFoodToBackend(food, barcode).catch(() => {});
+      }
+    }
+
     setIsFetching(false);
 
     if (food) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Save to backend for future reuse (fire-and-forget)
-      saveFoodToBackend(food).catch(() => {});
       setShowBarcodeModal(false);
       setBarcodeInput('');
       setSelectedFood(food);

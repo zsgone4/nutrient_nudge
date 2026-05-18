@@ -37,6 +37,57 @@ foodsRouter.get("/", async (c) => {
   });
 });
 
+// GET /api/foods/barcode/:barcode - Look up food by barcode
+foodsRouter.get("/barcode/:barcode", async (c) => {
+  const barcode = c.req.param("barcode");
+
+  const food = await db.food.findUnique({
+    where: { barcode },
+  });
+
+  if (!food) {
+    return c.json({ error: "Food not found" }, 404);
+  }
+
+  return c.json({
+    food: {
+      ...food,
+      servingSize: Number(food.servingSize),
+      calories: Number(food.calories),
+      protein: Number(food.protein),
+      carbohydrates: Number(food.carbohydrates),
+      fat: Number(food.fat),
+      fiber: Number(food.fiber),
+      sugar: Number(food.sugar),
+      vitaminA: Number(food.vitaminA),
+      vitaminB1: Number(food.vitaminB1),
+      vitaminB2: Number(food.vitaminB2),
+      vitaminB3: Number(food.vitaminB3),
+      vitaminB5: Number(food.vitaminB5),
+      vitaminB6: Number(food.vitaminB6),
+      vitaminB7: Number(food.vitaminB7),
+      vitaminB9: Number(food.vitaminB9),
+      vitaminB12: Number(food.vitaminB12),
+      vitaminC: Number(food.vitaminC),
+      vitaminD: Number(food.vitaminD),
+      vitaminE: Number(food.vitaminE),
+      vitaminK: Number(food.vitaminK),
+      calcium: Number(food.calcium),
+      iron: Number(food.iron),
+      magnesium: Number(food.magnesium),
+      phosphorus: Number(food.phosphorus),
+      potassium: Number(food.potassium),
+      sodium: Number(food.sodium),
+      zinc: Number(food.zinc),
+      copper: Number(food.copper),
+      manganese: Number(food.manganese),
+      selenium: Number(food.selenium),
+      chromium: Number(food.chromium),
+      iodine: Number(food.iodine),
+    },
+  });
+});
+
 // GET /api/foods/search - Search foods by name or category
 foodsRouter.get("/search", async (c) => {
   const query = c.req.query("q") || "";
@@ -128,8 +179,9 @@ foodsRouter.get("/:id", async (c) => {
   });
 });
 
-// POST /api/foods - Create a new food (admin only in production)
+// POST /api/foods - Create a new food (or return existing if same barcode)
 const foodSchema = z.object({
+  barcode: z.string().optional(),
   name: z.string().min(1),
   brand: z.string().optional(),
   servingSize: z.number().positive(),
@@ -174,10 +226,17 @@ const foodSchema = z.object({
 foodsRouter.post("/", zValidator("json", foodSchema), async (c) => {
   const data = c.req.valid("json");
 
-  const food = await db.food.create({
-    data,
-  });
+  // If a barcode is provided, upsert so multiple users scanning the same product don't create duplicates
+  if (data.barcode) {
+    const food = await db.food.upsert({
+      where: { barcode: data.barcode },
+      create: data,
+      update: {},
+    });
+    return c.json({ success: true, food }, 201);
+  }
 
+  const food = await db.food.create({ data });
   return c.json({ success: true, food }, 201);
 });
 

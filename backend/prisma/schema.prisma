@@ -42,6 +42,7 @@ model UserProfile {
 
 model Food {
   id               String         @id @default(cuid())
+  barcode          String?        @unique
   name             String
   brand            String?
   servingSize      Float
