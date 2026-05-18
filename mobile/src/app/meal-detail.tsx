@@ -188,11 +188,11 @@ export default function MealDetailScreen() {
               onSubmitEditing={handleSaveMeal}
             />
             <View className="flex-row gap-3">
-              <Pressable onPress={() => setSaveModalVisible(false)} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 items-center">
+              <Pressable onPress={() => setSaveModalVisible(false)} disabled={createMeal.isPending} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 items-center">
                 <Text className="font-semibold text-gray-600 dark:text-gray-300">Cancel</Text>
               </Pressable>
-              <Pressable onPress={handleSaveMeal} className="flex-1 py-3 rounded-xl bg-emerald-500 items-center">
-                <Text className="font-semibold text-white">Save</Text>
+              <Pressable onPress={handleSaveMeal} disabled={createMeal.isPending} className="flex-1 py-3 rounded-xl bg-emerald-500 items-center">
+                <Text className="font-semibold text-white">{createMeal.isPending ? 'Saving meal...' : 'Save'}</Text>
               </Pressable>
             </View>
           </Pressable>
