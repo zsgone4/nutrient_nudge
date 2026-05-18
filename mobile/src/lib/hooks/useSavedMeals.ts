@@ -20,6 +20,13 @@ function mapBackendMeal(m: any): SavedMeal {
 
 export function useSavedMeals() {
   const userId = useUserStore(s => s.userId);
+  const userEmail = useUserStore(s => s.userEmail);
+  const userName = useUserStore(s => s.userName);
+  const userAge = useUserStore(s => s.userAge);
+  const userGender = useUserStore(s => s.userGender);
+  const userTrainingGoal = useUserStore(s => s.userTrainingGoal);
+  const userGoals = useUserStore(s => s.userGoals);
+  const setSignedUp = useUserStore(s => s.setSignedUp);
   const qc = useQueryClient();
   const queryKey = ['saved-meals', userId];
 
@@ -38,6 +45,53 @@ export function useSavedMeals() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey });
 
+  // Recover from stale userId by re-registering with stored email
+  const recoverUser = async (): Promise<string | null> => {
+    if (!userEmail) return null;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          name: userName || 'User',
+          age: parseInt(userAge, 10) || 25,
+          gender: userGender || 'prefer-not-to-say',
+          trainingGoal: userTrainingGoal || undefined,
+          goals: userGoals.length > 0 ? userGoals : ['general'],
+          agreedToPolicy: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.user?.id) {
+        setSignedUp(data.user.id, userEmail, {
+          userName,
+          userAge,
+          userGender,
+          userTrainingGoal,
+          userGoals,
+        });
+        return data.user.id;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveMealRequest = async (uid: string, id: string, name: string, entries: { food: Food; servings: number }[]) => {
+    return fetch(`${BACKEND_URL}/api/saved-meals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        userId: uid,
+        name,
+        items: entries.map(e => ({ foodData: JSON.stringify(e.food), servings: e.servings })),
+      }),
+    });
+  };
+
   const createMeal = useMutation({
     mutationFn: async ({
       name,
@@ -48,16 +102,16 @@ export function useSavedMeals() {
     }) => {
       if (!userId) throw new Error('Not signed in');
       const id = generateId();
-      const res = await fetch(`${BACKEND_URL}/api/saved-meals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          userId,
-          name,
-          items: entries.map(e => ({ foodData: JSON.stringify(e.food), servings: e.servings })),
-        }),
-      });
+      let res = await saveMealRequest(userId, id, name, entries);
+
+      if (res.status === 404) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'USER_NOT_FOUND') {
+          const newId = await recoverUser();
+          if (newId) res = await saveMealRequest(newId, id, name, entries);
+        }
+      }
+
       if (!res.ok) throw new Error('Failed to save meal');
       return res.json();
     },
@@ -75,16 +129,16 @@ export function useSavedMeals() {
       entries: { food: Food; servings: number }[];
     }) => {
       if (!userId) throw new Error('Not signed in');
-      const res = await fetch(`${BACKEND_URL}/api/saved-meals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          userId,
-          name,
-          items: entries.map(e => ({ foodData: JSON.stringify(e.food), servings: e.servings })),
-        }),
-      });
+      let res = await saveMealRequest(userId, id, name, entries);
+
+      if (res.status === 404) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'USER_NOT_FOUND') {
+          const newId = await recoverUser();
+          if (newId) res = await saveMealRequest(newId, id, name, entries);
+        }
+      }
+
       if (!res.ok) throw new Error('Failed to update meal');
       return res.json();
     },

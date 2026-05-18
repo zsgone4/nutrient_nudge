@@ -37,25 +37,32 @@ savedMealsRouter.post(
   async (c) => {
     const { id, userId, name, items } = c.req.valid("json");
 
-    const meal = await db.savedMeal.upsert({
-      where: { id },
-      create: {
-        id,
-        userId,
-        name,
-        items: { create: items },
-      },
-      update: {
-        name,
-        items: {
-          deleteMany: {},
-          create: items,
+    try {
+      const meal = await db.savedMeal.upsert({
+        where: { id },
+        create: {
+          id,
+          userId,
+          name,
+          items: { create: items },
         },
-      },
-      include: { items: true },
-    });
+        update: {
+          name,
+          items: {
+            deleteMany: {},
+            create: items,
+          },
+        },
+        include: { items: true },
+      });
 
-    return c.json({ savedMeal: meal }, 201);
+      return c.json({ savedMeal: meal }, 201);
+    } catch (e: any) {
+      if (e?.code === "P2003") {
+        return c.json({ error: "USER_NOT_FOUND" }, 404);
+      }
+      throw e;
+    }
   }
 );
 
