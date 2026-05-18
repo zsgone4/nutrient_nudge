@@ -31,7 +31,8 @@ app.use(
   "*",
   cors({
     origin: (origin) => {
-      if (!origin) return null;
+      // Native mobile apps don't send Origin — allow them through
+      if (!origin) return "*";
       if (
         origin.startsWith("http://localhost") ||
         origin.startsWith("http://127.0.0.1")
