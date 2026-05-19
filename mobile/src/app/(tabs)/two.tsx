@@ -12,7 +12,7 @@ import { useUserStore } from '@/lib/state/user-store';
 import { MICRONUTRIENT_INFO, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 const EMPTY_ENTRIES: FoodLogEntry[] = [];
 import { ShareScoreModal } from '@/components/ShareScoreModal';

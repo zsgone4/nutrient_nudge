@@ -1,6 +1,6 @@
 import { FoodLogEntry, Micronutrients } from '../types/nutrition';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 export function calculateNutrientScore(
   entries: FoodLogEntry[],

@@ -3,7 +3,7 @@ import { useUserStore } from '@/lib/state/user-store';
 import { Food } from '@/lib/types/nutrition';
 import { SavedMeal } from '@/lib/state/nutrition-store';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 function mapBackendMeal(m: any): SavedMeal {

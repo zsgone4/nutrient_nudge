@@ -12,7 +12,7 @@ import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComp
 import { MealType, Macronutrients, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
 import { useNotifications } from '@/lib/hooks/useNotifications';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 const EMPTY_ENTRIES: FoodLogEntry[] = [];
 

@@ -16,7 +16,7 @@ import {
   UserProfile,
 } from '@/lib/types/nutrition';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 type SetupStep = 'basics' | 'activity' | 'goal' | 'summary';
 

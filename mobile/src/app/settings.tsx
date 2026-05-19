@@ -19,7 +19,7 @@ import { Check, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react-native
 
 import { useUserStore } from '@/lib/state/user-store';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 const C = {
   bg: '#0D0D0D',

@@ -13,7 +13,7 @@ import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY
 import { useColorScheme } from '@/lib/useColorScheme';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 const CATEGORY_ICONS: Record<FoodCategory, React.ReactNode> = {
   fruits: <Apple size={20} color="#10B981" />,

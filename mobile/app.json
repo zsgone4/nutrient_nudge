@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vibecode.nutrientnudge-9lzdjs",
-      "buildNumber": "13",
+      "buildNumber": "14",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"

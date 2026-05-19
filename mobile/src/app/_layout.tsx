@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/lib/state/user-store';
 import { requestNotificationPermissions, loadNotificationSettings, scheduleAllNotifications } from '@/lib/utils/notificationSettings';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { BACKEND_URL } from '@/lib/config';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
