@@ -126,6 +126,25 @@ nutrientScoreRouter.post(
   }
 );
 
+// GET /api/nutrient-score/history/:userId - Get nutrient score history for a user
+nutrientScoreRouter.get("/history/:userId", async (c) => {
+  const userId = c.req.param("userId");
+  const limit = Number(c.req.query("limit")) || 30;
+
+  const scores = await db.nutrientScore.findMany({
+    where: { userId },
+    orderBy: { date: "desc" },
+    take: limit,
+  });
+
+  return c.json({
+    scores: scores.map((s) => ({
+      ...s,
+      micronutrients: JSON.parse(s.micronutrients),
+    })),
+  });
+});
+
 // GET /api/nutrient-score/:userId/:date - Get nutrient score for a specific date
 nutrientScoreRouter.get("/:userId/:date", async (c) => {
   const userId = c.req.param("userId");
@@ -174,24 +193,5 @@ nutrientScoreRouter.post(
     return c.json({ success: true, nutrientScore: result });
   }
 );
-
-// GET /api/nutrient-score/history/:userId - Get nutrient score history for a user
-nutrientScoreRouter.get("/history/:userId", async (c) => {
-  const userId = c.req.param("userId");
-  const limit = Number(c.req.query("limit")) || 30; // Default last 30 days
-
-  const scores = await db.nutrientScore.findMany({
-    where: { userId },
-    orderBy: { date: "desc" },
-    take: limit,
-  });
-
-  return c.json({
-    scores: scores.map((s) => ({
-      ...s,
-      micronutrients: JSON.parse(s.micronutrients),
-    })),
-  });
-});
 
 export { nutrientScoreRouter };
