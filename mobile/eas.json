@@ -15,9 +15,9 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://preview-fbluklweydvk.dev.vibecode.run",
-        "EXPO_PUBLIC_VIBECODE_BACKEND_URL": "https://preview-fbluklweydvk.dev.vibecode.run",
-        "BACKEND_URL": "https://preview-fbluklweydvk.dev.vibecode.run"
+        "EXPO_PUBLIC_BACKEND_URL": "https://nutrient-nudge-1.onrender.com",
+        "EXPO_PUBLIC_VIBECODE_BACKEND_URL": "https://nutrient-nudge-1.onrender.com",
+        "BACKEND_URL": "https://nutrient-nudge-1.onrender.com"
       },
       "ios": {
         "distribution": "store"
