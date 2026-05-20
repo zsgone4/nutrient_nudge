@@ -5,9 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/lib/state/user-store';
+import { useNutritionStore, getTodayString } from '@/lib/state/nutrition-store';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -33,6 +34,21 @@ function RootLayoutNav({ colorScheme }: { colorScheme: 'light' | 'dark' | null |
       router.replace('/signup');
     }
   }, [hasHydrated]);
+
+  // Keep selectedDate aligned with the real calendar date — otherwise an app
+  // left backgrounded across midnight reads/writes the wrong day's logs.
+  useEffect(() => {
+    const syncToToday = () => {
+      const today = getTodayString();
+      const { selectedDate, setSelectedDate } = useNutritionStore.getState();
+      if (selectedDate !== today) setSelectedDate(today);
+    };
+    syncToToday();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') syncToToday();
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
