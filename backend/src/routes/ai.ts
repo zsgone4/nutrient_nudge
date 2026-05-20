@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { log } from "../lib/logger";
 
 const aiRouter = new Hono();
 
@@ -119,15 +120,18 @@ Give personalised feedback: how they're doing vs their goals, what they're missi
     });
 
     if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      log.warn("ai.zach.upstream_error", { status: response.status, body: body.slice(0, 500) });
       throw new Error(`Anthropic API error: ${response.status}`);
     }
 
     const data = await response.json() as { content: Array<{ type: string; text: string }> };
     const text = data.content.find(b => b.type === "text")?.text ?? "Great work today! Keep logging your meals for personalised insights.";
 
+    log.info("ai.zach.ok", { user: name, deficiencyCount: deficiencies.length });
     return c.json({ message: text, deficiencies });
   } catch (err) {
-    console.error("Zach AI error:", err);
+    log.error("ai.zach.failed", { err, user: name, deficiencyCount: deficiencies.length });
     return c.json({
       message: calPct < 30
         ? `Hey ${name}! You've barely started logging today — every meal you track brings you closer to your goal. Start with a good meal and check back for insights!`

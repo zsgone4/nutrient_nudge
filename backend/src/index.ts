@@ -1,8 +1,8 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import "./env";
+import { log } from "./lib/logger";
 import { signupRouter } from "./routes/signup";
 import { deleteAccountRouter } from "./routes/deleteAccount";
 import { updateProfileRouter } from "./routes/updateProfile";
@@ -38,7 +38,27 @@ app.use(
   })
 );
 
-app.use("*", logger());
+// Request logging — emits one line per request with method, path, status, latency
+app.use("*", async (c, next) => {
+  const start = Date.now();
+  await next();
+  log.info("http.request", {
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    durationMs: Date.now() - start,
+  });
+});
+
+// Catch-all error handler so uncaught throws still surface with context
+app.onError((err, c) => {
+  log.error("http.unhandled", {
+    method: c.req.method,
+    path: c.req.path,
+    err,
+  });
+  return c.json({ error: "Internal server error" }, 500);
+});
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
@@ -58,5 +78,5 @@ app.route("/api/ai", aiRouter);
 const port = Number(process.env.PORT) || 3000;
 
 serve({ fetch: app.fetch, port }, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  log.info("server.started", { port, env: process.env.NODE_ENV });
 });

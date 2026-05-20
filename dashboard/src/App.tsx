@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { dashboardAPI, DashboardStats, DashboardUser } from './api';
+import { log } from './lib/logger';
 import Stats from './components/Stats';
 import UsersTable from './components/UsersTable';
 import UserDetailModal from './components/UserDetailModal';
@@ -21,17 +22,18 @@ export default function App() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const [statsData, usersData] = await Promise.all([
         dashboardAPI.getStats(),
         dashboardAPI.getUsers(),
       ]);
 
+      log.info('dashboard.loaded', { userCount: usersData.users.length });
       setStats(statsData);
       setUsers(usersData.users);
     } catch (err) {
+      log.error('dashboard.load.failed', { err });
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-      console.error('Dashboard error:', err);
     } finally {
       setLoading(false);
     }

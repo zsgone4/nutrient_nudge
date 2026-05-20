@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
+import { log } from '@/lib/logger';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -136,6 +137,7 @@ export default function SignupScreen() {
       }, 600);
     },
     onError: (err: Error) => {
+      log.error("signup.failed", { err, email: email.trim().toLowerCase() });
       setErrorMsg(err.message);
     },
   });

@@ -10,6 +10,7 @@ import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { MacroBar, MealCard, CircularProgress } from '@/components/NutritionComponents';
 import { MealType, Macronutrients, Micronutrients, FoodLogEntry } from '@/lib/types/nutrition';
 import { useNotifications } from '@/lib/hooks/useNotifications';
+import { log } from '@/lib/logger';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -86,9 +87,11 @@ export default function DashboardScreen() {
         const data = await res.json() as { message: string; deficiencies: Deficiency[] };
         setZachMessage(data.message);
         setZachDeficiencies(data.deficiencies ?? []);
+      } else {
+        log.warn('ai.zach.http_error', { status: res.status });
       }
-    } catch {
-      // silently fail — Zach uses fallback message
+    } catch (err) {
+      log.error('ai.zach.failed', { err });
     } finally {
       setZachLoading(false);
     }
