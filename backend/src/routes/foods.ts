@@ -10,25 +10,7 @@ foodsRouter.get("/", async (c) => {
   const skip = Number(c.req.query("skip")) || 0;
   const take = Math.min(Number(c.req.query("take")) || 50, 100); // Max 100 per request
 
-  const foods = await db.food.findMany({
-    skip,
-    take,
-    select: {
-      id: true,
-      name: true,
-      brand: true,
-      servingSize: true,
-      servingUnit: true,
-      category: true,
-      image: true,
-      calories: true,
-      protein: true,
-      carbohydrates: true,
-      fat: true,
-      fiber: true,
-    },
-  });
-
+  const foods = await db.food.findMany({ skip, take });
   const total = await db.food.count();
 
   return c.json({
@@ -57,20 +39,6 @@ foodsRouter.get("/search", async (c) => {
       ...(category && { category }),
     },
     take: 50,
-    select: {
-      id: true,
-      name: true,
-      brand: true,
-      servingSize: true,
-      servingUnit: true,
-      category: true,
-      image: true,
-      calories: true,
-      protein: true,
-      carbohydrates: true,
-      fat: true,
-      fiber: true,
-    },
   });
 
   return c.json({ foods });

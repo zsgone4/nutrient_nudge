@@ -122,33 +122,39 @@ async function saveFoodToBackend(food: Food): Promise<string | null> {
   }
 }
 
+const MICRO_KEYS: (keyof Micronutrients)[] = [
+  'vitaminA', 'vitaminB1', 'vitaminB2', 'vitaminB3', 'vitaminB5',
+  'vitaminB6', 'vitaminB7', 'vitaminB9', 'vitaminB12', 'vitaminC',
+  'vitaminD', 'vitaminE', 'vitaminK', 'calcium', 'iron', 'magnesium',
+  'phosphorus', 'potassium', 'sodium', 'zinc', 'copper', 'manganese',
+  'selenium', 'chromium', 'iodine',
+];
+
 async function searchFoodsAPI(query: string): Promise<Food[]> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/foods/search?q=${encodeURIComponent(query)}`);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.foods ?? []).map((f: any): Food => ({
-      id: f.id,
-      name: f.name,
-      servingSize: Number(f.servingSize),
-      servingUnit: f.servingUnit,
-      category: f.category,
-      macros: {
-        calories: Number(f.calories),
-        protein: Number(f.protein),
-        carbohydrates: Number(f.carbohydrates),
-        fat: Number(f.fat),
-        fiber: Number(f.fiber ?? 0),
-        sugar: Number(f.sugar ?? 0),
-      },
-      micros: {
-        vitaminA: 0, vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB5: 0,
-        vitaminB6: 0, vitaminB7: 0, vitaminB9: 0, vitaminB12: 0, vitaminC: 0,
-        vitaminD: 0, vitaminE: 0, vitaminK: 0, calcium: 0, iron: 0, magnesium: 0,
-        phosphorus: 0, potassium: 0, sodium: 0, zinc: 0, copper: 0, manganese: 0,
-        selenium: 0, chromium: 0, iodine: 0,
-      },
-    }));
+    return (data.foods ?? []).map((f: any): Food => {
+      const micros = {} as Micronutrients;
+      for (const k of MICRO_KEYS) micros[k] = Number(f[k] ?? 0);
+      return {
+        id: f.id,
+        name: f.name,
+        servingSize: Number(f.servingSize),
+        servingUnit: f.servingUnit,
+        category: f.category,
+        macros: {
+          calories: Number(f.calories),
+          protein: Number(f.protein),
+          carbohydrates: Number(f.carbohydrates),
+          fat: Number(f.fat),
+          fiber: Number(f.fiber ?? 0),
+          sugar: Number(f.sugar ?? 0),
+        },
+        micros,
+      };
+    });
   } catch {
     return [];
   }

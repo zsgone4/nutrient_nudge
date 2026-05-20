@@ -14,10 +14,10 @@ import {
 } from '../types/nutrition';
 
 // Helper to get today's date string
-const getTodayString = () => new Date().toISOString().split('T')[0];
+export const getTodayString = () => new Date().toISOString().split('T')[0]!;
 
 // Helper to generate unique IDs
-const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
 // Create empty nutrition objects
 const emptyMacros: Macronutrients = {
@@ -146,7 +146,10 @@ export const useNutritionStore = create<NutritionState>()(
       selectedDate: getTodayString(),
 
       addFoodEntry: (food, servings, mealType) => {
-        const date = get().selectedDate;
+        // Always file the entry under the actual current date, not the store's
+        // selectedDate — which may be stale if the app has been backgrounded
+        // across midnight.
+        const date = getTodayString();
         const entry: FoodLogEntry = {
           id: generateId(),
           food,
@@ -156,38 +159,38 @@ export const useNutritionStore = create<NutritionState>()(
           date,
         };
 
-        console.log('[NutritionStore] Adding food entry:', { food: food.name, servings, mealType, date });
-
-        set(state => {
-          const newLogs = {
+        set(state => ({
+          logs: {
             ...state.logs,
             [date]: [...(state.logs[date] || []), entry],
-          };
-          console.log('[NutritionStore] New logs for date:', date, newLogs[date]?.length, 'entries');
-          return { logs: newLogs };
-        });
+          },
+          // Keep selectedDate in sync so the dashboard reads the bucket we just wrote to.
+          selectedDate: date,
+        }));
       },
 
       removeFoodEntry: (entryId) => {
-        const date = get().selectedDate;
-        set(state => ({
-          logs: {
-            ...state.logs,
-            [date]: (state.logs[date] || []).filter(e => e.id !== entryId),
-          },
-        }));
+        // Scan every date bucket — the entry may have been written under a
+        // different selectedDate than the current one.
+        set(state => {
+          const nextLogs: Record<string, FoodLogEntry[]> = {};
+          for (const [date, list] of Object.entries(state.logs)) {
+            nextLogs[date] = list.filter(e => e.id !== entryId);
+          }
+          return { logs: nextLogs };
+        });
       },
 
       updateFoodEntry: (entryId, servings) => {
-        const date = get().selectedDate;
-        set(state => ({
-          logs: {
-            ...state.logs,
-            [date]: (state.logs[date] || []).map(e =>
+        set(state => {
+          const nextLogs: Record<string, FoodLogEntry[]> = {};
+          for (const [date, list] of Object.entries(state.logs)) {
+            nextLogs[date] = list.map(e =>
               e.id === entryId ? { ...e, servings } : e
-            ),
-          },
-        }));
+            );
+          }
+          return { logs: nextLogs };
+        });
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
