@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore, calculateTDEE, calculateTargetCalories } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
+import { log } from '@/lib/logger';
 import {
   Sex,
   ActivityLevel,
@@ -129,10 +130,12 @@ export default function ProfileScreen() {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as any).error ?? 'Failed to delete account');
       }
+      log.info('account.deleted', { userId });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clearUser();
       router.replace('/account-deleted');
     } catch (e: any) {
+      log.error('account.delete.failed', { err: e, userId });
       setDeleteError(e.message ?? 'Something went wrong');
       setIsDeleting(false);
     }

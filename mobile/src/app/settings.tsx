@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Check, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
+import { log } from '@/lib/logger';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -141,6 +142,7 @@ export default function SettingsScreen() {
       setTimeout(() => router.back(), 300);
     },
     onError: (err: Error) => {
+      log.error("profile.update.failed", { err, userId });
       setErrorMsg(err.message);
     },
   });
@@ -154,10 +156,12 @@ export default function SettingsScreen() {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? 'Failed to delete account');
       }
+      log.info("account.deleted", { userId });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clearUser();
       router.replace('/account-deleted');
     } catch (e: unknown) {
+      log.error("account.delete.failed", { err: e, userId });
       setDeleteError(e instanceof Error ? e.message : 'Something went wrong');
       setIsDeleting(false);
     }

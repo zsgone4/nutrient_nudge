@@ -9,6 +9,7 @@ import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
+import { log } from '@/lib/logger';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
@@ -37,9 +38,15 @@ async function fetchProductByBarcode(barcode: string): Promise<Food | null> {
       `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
       { headers: { 'User-Agent': 'NutritionApp/1.0' } }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      log.warn('barcode.lookup.http_error', { barcode, status: res.status });
+      return null;
+    }
     const data = await res.json();
-    if (data.status !== 1 || !data.product) return null;
+    if (data.status !== 1 || !data.product) {
+      log.info('barcode.lookup.not_found', { barcode });
+      return null;
+    }
 
     const p = data.product;
     const n = p.nutriments ?? {};
@@ -89,7 +96,8 @@ async function fetchProductByBarcode(barcode: string): Promise<Food | null> {
       },
     };
     return food;
-  } catch {
+  } catch (err) {
+    log.error('barcode.lookup.failed', { err, barcode });
     return null;
   }
 }
@@ -114,10 +122,14 @@ async function saveFoodToBackend(food: Food): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      log.warn('food.save_to_backend.http_error', { status: res.status, name: food.name });
+      return null;
+    }
     const data = await res.json();
     return data.food?.id ?? null;
-  } catch {
+  } catch (err) {
+    log.error('food.save_to_backend.failed', { err, name: food.name });
     return null;
   }
 }
@@ -125,7 +137,10 @@ async function saveFoodToBackend(food: Food): Promise<string | null> {
 async function searchFoodsAPI(query: string): Promise<Food[]> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/foods/search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      log.warn('food.search.http_error', { status: res.status, query });
+      return [];
+    }
     const data = await res.json();
     return (data.foods ?? []).map((f: any): Food => ({
       id: f.id,
@@ -149,7 +164,8 @@ async function searchFoodsAPI(query: string): Promise<Food[]> {
         selenium: 0, chromium: 0, iodine: 0,
       },
     }));
-  } catch {
+  } catch (err) {
+    log.error('food.search.failed', { err, query });
     return [];
   }
 }
