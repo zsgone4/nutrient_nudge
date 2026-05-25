@@ -8,8 +8,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed, BookmarkPlus, CalendarPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
-import { SavedMeal } from '@/lib/state/nutrition-store';
-import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
+import { SavedMeal, useSavedMeals } from '@/lib/state/saved-meals-store';
 import { Food } from '@/lib/types/nutrition';
 
 export default function SavedMealsScreen() {

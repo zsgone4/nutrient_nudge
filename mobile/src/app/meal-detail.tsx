@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
-import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
+import { useSavedMeals } from '@/lib/state/saved-meals-store';
 import { MealType, FoodLogEntry, Macronutrients, Micronutrients } from '@/lib/types/nutrition';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';
 

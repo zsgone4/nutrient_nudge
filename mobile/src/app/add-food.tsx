@@ -6,9 +6,9 @@ import { Search, X, Plus, Minus, Check, ChevronLeft, Apple, Beef, Milk, Wheat, D
 import * as Haptics from 'expo-haptics';
 
 import { FOOD_DATABASE, searchFoods } from '@/lib/data/foods';
-import { useNutritionStore, SavedMeal } from '@/lib/state/nutrition-store';
+import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { useUserStore } from '@/lib/state/user-store';
-import { useSavedMeals } from '@/lib/hooks/useSavedMeals';
+import { useSavedMeals, SavedMeal } from '@/lib/state/saved-meals-store';
 import { Food, MealType, FoodCategory, MICRONUTRIENT_INFO, Micronutrients, DAILY_VALUES } from '@/lib/types/nutrition';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { syncNutrientScore } from '@/lib/utils/nutrientScore';

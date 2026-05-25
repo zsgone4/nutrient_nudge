@@ -100,6 +100,101 @@ savedMealsRouter.delete("/:id", async (c) => {
   return c.json({ success: true });
 });
 
+type MobileFoodObj = {
+  id: string;
+  name: string;
+  brand?: string;
+  servingSize: number;
+  servingUnit: string;
+  category: string;
+  image?: string;
+  macros: {
+    calories: number;
+    protein: number;
+    carbohydrates: number;
+    fat: number;
+    fiber: number;
+    sugar: number;
+  };
+  micros: {
+    vitaminA: number;
+    vitaminB1: number;
+    vitaminB2: number;
+    vitaminB3: number;
+    vitaminB5: number;
+    vitaminB6: number;
+    vitaminB7: number;
+    vitaminB9: number;
+    vitaminB12: number;
+    vitaminC: number;
+    vitaminD: number;
+    vitaminE: number;
+    vitaminK: number;
+    calcium: number;
+    iron: number;
+    magnesium: number;
+    phosphorus: number;
+    potassium: number;
+    sodium: number;
+    zinc: number;
+    copper: number;
+    manganese: number;
+    selenium: number;
+    chromium: number;
+    iodine: number;
+  };
+};
+
+// Upsert a food from its mobile JSON snapshot, ensuring it exists in the DB.
+// This handles local FOOD_DATABASE foods that have never been saved to the backend.
+async function ensureFoodExists(foodObj: MobileFoodObj): Promise<string> {
+  await db.food.upsert({
+    where: { id: foodObj.id },
+    create: {
+      id: foodObj.id,
+      name: foodObj.name,
+      brand: foodObj.brand ?? null,
+      servingSize: foodObj.servingSize,
+      servingUnit: foodObj.servingUnit,
+      category: foodObj.category,
+      image: foodObj.image ?? null,
+      calories: foodObj.macros.calories,
+      protein: foodObj.macros.protein,
+      carbohydrates: foodObj.macros.carbohydrates,
+      fat: foodObj.macros.fat,
+      fiber: foodObj.macros.fiber,
+      sugar: foodObj.macros.sugar,
+      vitaminA: foodObj.micros.vitaminA,
+      vitaminB1: foodObj.micros.vitaminB1,
+      vitaminB2: foodObj.micros.vitaminB2,
+      vitaminB3: foodObj.micros.vitaminB3,
+      vitaminB5: foodObj.micros.vitaminB5,
+      vitaminB6: foodObj.micros.vitaminB6,
+      vitaminB7: foodObj.micros.vitaminB7,
+      vitaminB9: foodObj.micros.vitaminB9,
+      vitaminB12: foodObj.micros.vitaminB12,
+      vitaminC: foodObj.micros.vitaminC,
+      vitaminD: foodObj.micros.vitaminD,
+      vitaminE: foodObj.micros.vitaminE,
+      vitaminK: foodObj.micros.vitaminK,
+      calcium: foodObj.micros.calcium,
+      iron: foodObj.micros.iron,
+      magnesium: foodObj.micros.magnesium,
+      phosphorus: foodObj.micros.phosphorus,
+      potassium: foodObj.micros.potassium,
+      sodium: foodObj.micros.sodium,
+      zinc: foodObj.micros.zinc,
+      copper: foodObj.micros.copper,
+      manganese: foodObj.micros.manganese,
+      selenium: foodObj.micros.selenium,
+      chromium: foodObj.micros.chromium,
+      iodine: foodObj.micros.iodine,
+    },
+    update: {}, // Don't overwrite an existing backend food record
+  });
+  return foodObj.id;
+}
+
 savedMealsRouter.post(
   "/:id/log",
   zValidator(
@@ -124,21 +219,30 @@ savedMealsRouter.post(
 
     const timestamp = BigInt(Date.now());
 
+    // Ensure every food referenced by the saved meal exists in the Food table.
+    // Local FOOD_DATABASE items may never have been persisted to the backend.
+    const resolvedItems = await Promise.all(
+      meal.items.map(async (item) => {
+        const foodObj = JSON.parse(item.foodData) as MobileFoodObj;
+        const foodId = await ensureFoodExists(foodObj);
+        return { foodId, servings: item.servings };
+      })
+    );
+
     const entries = await db.$transaction(
-      meal.items.map((item) => {
-        const foodObj = JSON.parse(item.foodData) as { id: string };
-        return db.foodLogEntry.create({
+      resolvedItems.map(({ foodId, servings }) =>
+        db.foodLogEntry.create({
           data: {
             userId,
-            foodId: foodObj.id,
-            servings: item.servings,
+            foodId,
+            servings,
             mealType,
             date,
             timestamp,
           },
           include: { food: true },
-        });
-      })
+        })
+      )
     );
 
     return c.json({ success: true, entries }, 201);
