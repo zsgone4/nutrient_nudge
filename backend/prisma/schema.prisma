@@ -24,6 +24,7 @@ model Signup {
   userProfile      UserProfile?
   foodLogEntries   FoodLogEntry[]
   nutrientScores   NutrientScore[]
+  savedMeals       SavedMeal[]
 }
 
 model UserProfile {
@@ -86,6 +87,7 @@ model Food {
   iodine           Float          // mcg
   
   foodLogEntries   FoodLogEntry[]
+  savedMealItems   SavedMealItem[]
   createdAt        DateTime       @default(now())
 }
 
@@ -112,4 +114,24 @@ model NutrientScore {
   createdAt        DateTime @default(now())
   
   @@unique([userId, date])
+}
+
+NutrientScore
+
+model SavedMeal {
+id String @id @default(cuid())
+userId String
+user Signup @relation(fields: [userId], references: [id], onDelete: Cascade)
+name String
+createdAt DateTime @default(now())
+items SavedMealItem[]
+}
+
+model SavedMealItem {
+id String @id @default(cuid())
+savedMealId String
+savedMeal SavedMeal @relation(fields: [savedMealId], references: [id], onDelete: Cascade)
+foodId String
+food Food @relation(fields: [foodId], references: [id])
+servings Float
 }
