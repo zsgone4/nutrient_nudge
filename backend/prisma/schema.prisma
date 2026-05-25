@@ -105,15 +105,15 @@ model FoodLogEntry {
 }
 
 model NutrientScore {
-  id               String   @id @default(cuid())
-  userId           String
-  user             Signup   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date             String   // YYYY-MM-DD format
-  score            Float    // 0-100 score based on micronutrient completeness
-  micronutrients   String   // JSON string with detailed breakdown of micronutrient coverage
-  createdAt        DateTime @default(now())
-  
-  @@unique([userId, date])
+id String @id @default(cuid())
+userId String
+user Signup @relation(fields: [userId], references: [id], onDelete: Cascade)
+date String
+score Float
+micronutrients String
+createdAt DateTime @default(now())
+
+@@unique([userId, date])
 }
 
 NutrientScore
