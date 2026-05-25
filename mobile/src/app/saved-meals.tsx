@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed, BookmarkPlus } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Trash2, Plus, Minus, X, Check, UtensilsCrossed, BookmarkPlus, CalendarPlus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { SavedMeal } from '@/lib/state/nutrition-store';
@@ -16,9 +16,11 @@ export default function SavedMealsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { savedMeals, isLoading, createMeal, updateMeal, deleteMeal } = useSavedMeals();
+  const { savedMeals, isLoading, createMeal, updateMeal, deleteMeal, logMeal } = useSavedMeals();
 
   const [editingMeal, setEditingMeal] = useState<SavedMeal | null>(null);
+  const [loggingMeal, setLoggingMeal] = useState<SavedMeal | null>(null);
+  const [logMealType, setLogMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snacks'>('lunch');
   const [editName, setEditName] = useState('');
   const [editEntries, setEditEntries] = useState<{ food: Food; servings: number }[]>([]);
 
@@ -87,6 +89,20 @@ export default function SavedMealsScreen() {
     router.push({ pathname: '/add-food', params: { savedMealId: editingMeal.id } });
     closeEdit();
   }, [editingMeal, router, closeEdit]);
+
+  const handleLogMeal = useCallback(async () => {
+    if (!loggingMeal) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const today = new Date().toISOString().split('T')[0]!;
+    try {
+      await logMeal.mutateAsync({ id: loggingMeal.id, date: today, mealType: logMealType });
+    } catch {
+      Alert.alert('Error', 'Failed to log meal. Please try again.');
+      return;
+    }
+    setLoggingMeal(null);
+    Alert.alert('Logged!', `"${loggingMeal.name}" added to your ${logMealType} today.`);
+  }, [loggingMeal, logMealType, logMeal]);
 
   const handleCreateMeal = useCallback(async () => {
     const name = createName.trim();
@@ -200,11 +216,21 @@ export default function SavedMealsScreen() {
                 {/* Actions */}
                 <View className="flex-row border-t border-gray-100 dark:border-gray-800">
                   <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setLoggingMeal(meal); setLogMealType('lunch'); }}
+                    className="flex-1 flex-row items-center justify-center py-3 active:bg-emerald-50 dark:active:bg-emerald-900/20"
+                    disabled={meal.entries.length === 0}
+                    style={{ opacity: meal.entries.length === 0 ? 0.4 : 1 }}
+                  >
+                    <CalendarPlus size={16} color="#10B981" />
+                    <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-1.5">Log</Text>
+                  </Pressable>
+                  <View className="w-px bg-gray-100 dark:bg-gray-800" />
+                  <Pressable
                     onPress={() => openEdit(meal)}
                     className="flex-1 flex-row items-center justify-center py-3 active:bg-gray-50 dark:active:bg-gray-800"
                   >
-                    <Pencil size={16} color="#10B981" />
-                    <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-1.5">Edit</Text>
+                    <Pencil size={16} color="#6B7280" />
+                    <Text className="text-sm font-semibold text-gray-600 dark:text-gray-400 ml-1.5">Edit</Text>
                   </Pressable>
                   <View className="w-px bg-gray-100 dark:bg-gray-800" />
                   <Pressable
@@ -349,6 +375,74 @@ export default function SavedMealsScreen() {
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Log Meal Modal */}
+      <Modal
+        visible={loggingMeal !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLoggingMeal(null)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 24 }}
+          onPress={() => setLoggingMeal(null)}
+        >
+          <Pressable onPress={() => {}} className="bg-white dark:bg-gray-900 rounded-2xl p-6">
+            <View className="flex-row items-center mb-1">
+              <View className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center mr-3">
+                <CalendarPlus size={20} color="#10B981" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-gray-900 dark:text-white">Log to Today</Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400" numberOfLines={1}>{loggingMeal?.name}</Text>
+              </View>
+            </View>
+
+            <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 mt-4">Meal</Text>
+            <View className="flex-row flex-wrap gap-2 mb-5">
+              {(['breakfast', 'lunch', 'dinner', 'snacks'] as const).map(type => (
+                <Pressable
+                  key={type}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setLogMealType(type); }}
+                  className="px-4 py-2 rounded-full border"
+                  style={{
+                    backgroundColor: logMealType === type ? '#10B981' : 'transparent',
+                    borderColor: logMealType === type ? '#10B981' : '#D1D5DB',
+                  }}
+                >
+                  <Text
+                    className="text-sm font-semibold capitalize"
+                    style={{ color: logMealType === type ? '#ffffff' : '#6B7280' }}
+                  >
+                    {type}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={() => setLoggingMeal(null)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 items-center"
+              >
+                <Text className="text-sm font-semibold text-gray-600 dark:text-gray-400">Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleLogMeal}
+                disabled={logMeal.isPending}
+                className="flex-1 py-3 rounded-xl bg-emerald-500 items-center"
+                style={{ opacity: logMeal.isPending ? 0.45 : 1 }}
+              >
+                {logMeal.isPending ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text className="text-sm font-semibold text-white">Add to Diary</Text>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Create New Meal Modal */}

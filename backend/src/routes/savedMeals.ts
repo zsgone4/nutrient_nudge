@@ -100,4 +100,49 @@ savedMealsRouter.delete("/:id", async (c) => {
   return c.json({ success: true });
 });
 
+savedMealsRouter.post(
+  "/:id/log",
+  zValidator(
+    "json",
+    z.object({
+      userId: z.string(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      mealType: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
+    })
+  ),
+  async (c) => {
+    const { id } = c.req.param();
+    const { userId, date, mealType } = c.req.valid("json");
+
+    const meal = await db.savedMeal.findFirst({
+      where: { id, userId },
+      include: { items: true },
+    });
+
+    if (!meal) return c.json({ error: "Saved meal not found" }, 404);
+    if (meal.items.length === 0) return c.json({ error: "Saved meal has no items" }, 400);
+
+    const timestamp = BigInt(Date.now());
+
+    const entries = await db.$transaction(
+      meal.items.map((item) => {
+        const foodObj = JSON.parse(item.foodData) as { id: string };
+        return db.foodLogEntry.create({
+          data: {
+            userId,
+            foodId: foodObj.id,
+            servings: item.servings,
+            mealType,
+            date,
+            timestamp,
+          },
+          include: { food: true },
+        });
+      })
+    );
+
+    return c.json({ success: true, entries }, 201);
+  }
+);
+
 export { savedMealsRouter };

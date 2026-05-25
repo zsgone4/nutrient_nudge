@@ -178,5 +178,29 @@ export function useSavedMeals() {
     onSuccess: invalidate,
   });
 
-  return { savedMeals, isLoading, createMeal, updateMeal, deleteMeal };
+  const logMeal = useMutation({
+    mutationFn: async ({
+      id,
+      date,
+      mealType,
+    }: {
+      id: string;
+      date: string;
+      mealType: string;
+    }) => {
+      if (!userId) throw new Error('Not signed in');
+      const res = await fetch(`${BACKEND_URL}/api/saved-meals/${id}/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, date, mealType }),
+      });
+      if (!res.ok) throw new Error('Failed to log meal');
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['food-logs'] });
+    },
+  });
+
+  return { savedMeals, isLoading, createMeal, updateMeal, deleteMeal, logMeal };
 }
