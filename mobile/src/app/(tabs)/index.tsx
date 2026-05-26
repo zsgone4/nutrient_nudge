@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell } from 'lucide-react-native';
+import { Coffee, Sun, Moon, Cookie, RefreshCw, X, Bell, Bookmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useNutritionStore } from '@/lib/state/nutrition-store';
@@ -317,7 +317,16 @@ export default function DashboardScreen() {
 
         {/* Meals */}
         <View>
-          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-1">Meals</Text>
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-lg font-bold text-gray-900 dark:text-white">Meals</Text>
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/saved-meals'); }}
+              className="flex-row items-center px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 active:opacity-70"
+            >
+              <Bookmark size={15} color="#10B981" />
+              <Text className="text-emerald-700 dark:text-emerald-400 text-sm font-semibold ml-1.5">Saved</Text>
+            </Pressable>
+          </View>
           <Text className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             Tap a meal to view or edit, or press + to add food
           </Text>
