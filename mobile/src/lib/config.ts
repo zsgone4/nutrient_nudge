@@ -1,1 +1,1 @@
-export const BACKEND_URL = 'https://preview-fbluklweydvk.dev.vibecode.run';
+export const BACKEND_URL = 'https://nutrient-nudge-1.onrender.com';
