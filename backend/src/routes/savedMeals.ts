@@ -245,7 +245,8 @@ savedMealsRouter.post(
       )
     );
 
-    return c.json({ success: true, entries }, 201);
+    const safeEntries = entries.map(e => ({ ...e, timestamp: e.timestamp.toString() }));
+    return c.json({ success: true, entries: safeEntries }, 201);
   }
 );
 
