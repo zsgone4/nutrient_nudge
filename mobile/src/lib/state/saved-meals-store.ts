@@ -14,10 +14,17 @@ function mapBackendMeal(m: any): SavedMeal {
     id: m.id,
     name: m.name,
     createdAt: new Date(m.createdAt).getTime(),
-    entries: (m.items ?? []).map((item: any) => ({
-      food: JSON.parse(item.foodData) as Food,
-      servings: item.servings,
-    })),
+    entries: (m.items ?? [])
+      .map((item: any) => {
+        try {
+          const food = JSON.parse(item.foodData) as Food;
+          if (!food?.macros) return null;
+          return { food, servings: item.servings };
+        } catch {
+          return null;
+        }
+      })
+      .filter((e: { food: Food; servings: number } | null): e is { food: Food; servings: number } => e !== null),
   };
 }
 
