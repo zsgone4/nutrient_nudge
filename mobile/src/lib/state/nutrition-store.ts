@@ -12,6 +12,7 @@ import {
   ACTIVITY_MULTIPLIERS,
   GOAL_ADJUSTMENTS,
 } from '../types/nutrition';
+import { log } from '../logger';
 
 // Helper to get today's date string
 const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -198,16 +199,14 @@ export const useNutritionStore = create<NutritionState>()(
           date,
         };
 
-        console.log('[NutritionStore] Adding food entry:', { food: food.name, servings, mealType, date });
+        log.debug('food.entry.added', { foodName: food.name, servings, mealType, date });
 
-        set(state => {
-          const newLogs = {
+        set(state => ({
+          logs: {
             ...state.logs,
             [date]: [...(state.logs[date] || []), entry],
-          };
-          console.log('[NutritionStore] New logs for date:', date, newLogs[date]?.length, 'entries');
-          return { logs: newLogs };
-        });
+          },
+        }));
       },
 
       removeFoodEntry: (entryId) => {

@@ -18,6 +18,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { useUserStore } from '@/lib/state/user-store';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
+import { log } from '@/lib/logger';
 
 import { BACKEND_URL } from '@/lib/config';
 
@@ -245,6 +246,7 @@ export default function SignupScreen() {
       }, 600);
     },
     onError: (err: Error) => {
+      log.error("signup.failed", { err, email: email.trim().toLowerCase() });
       setErrorMsg(err.message);
     },
   });

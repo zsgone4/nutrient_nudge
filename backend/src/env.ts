@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { log } from "./lib/logger";
 
 const envSchema = z.object({
   PORT: z.string().optional().default("3000"),
@@ -10,15 +11,13 @@ const envSchema = z.object({
 function validateEnv() {
   try {
     const parsed = envSchema.parse(process.env);
-    console.log("✅ Environment variables validated successfully");
+    log.info("env.validated");
     return parsed;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("❌ Environment variable validation failed:");
-      error.issues.forEach((err: any) => {
-        console.error(`  - ${err.path.join(".")}: ${err.message}`);
+      log.error("env.invalid", {
+        issues: error.issues.map((err) => `${err.path.join(".")}: ${err.message}`).join("; "),
       });
-      console.error("\nPlease check your .env file and ensure all required variables are set.");
       process.exit(1);
     }
     throw error;
