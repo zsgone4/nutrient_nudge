@@ -228,6 +228,60 @@ async function searchFoodsAPI(query: string): Promise<Food[]> {
   }
 }
 
+async function fetchFoodById(id: string): Promise<Food | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/foods/${id}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const f = data.food;
+    if (!f) return null;
+    return {
+      id: f.id,
+      name: f.name,
+      servingSize: Number(f.servingSize),
+      servingUnit: f.servingUnit,
+      category: f.category,
+      macros: {
+        calories: Number(f.calories),
+        protein: Number(f.protein),
+        carbohydrates: Number(f.carbohydrates),
+        fat: Number(f.fat),
+        fiber: Number(f.fiber ?? 0),
+        sugar: Number(f.sugar ?? 0),
+      },
+      micros: {
+        vitaminA: Number(f.vitaminA ?? 0),
+        vitaminB1: Number(f.vitaminB1 ?? 0),
+        vitaminB2: Number(f.vitaminB2 ?? 0),
+        vitaminB3: Number(f.vitaminB3 ?? 0),
+        vitaminB5: Number(f.vitaminB5 ?? 0),
+        vitaminB6: Number(f.vitaminB6 ?? 0),
+        vitaminB7: Number(f.vitaminB7 ?? 0),
+        vitaminB9: Number(f.vitaminB9 ?? 0),
+        vitaminB12: Number(f.vitaminB12 ?? 0),
+        vitaminC: Number(f.vitaminC ?? 0),
+        vitaminD: Number(f.vitaminD ?? 0),
+        vitaminE: Number(f.vitaminE ?? 0),
+        vitaminK: Number(f.vitaminK ?? 0),
+        calcium: Number(f.calcium ?? 0),
+        iron: Number(f.iron ?? 0),
+        magnesium: Number(f.magnesium ?? 0),
+        phosphorus: Number(f.phosphorus ?? 0),
+        potassium: Number(f.potassium ?? 0),
+        sodium: Number(f.sodium ?? 0),
+        zinc: Number(f.zinc ?? 0),
+        copper: Number(f.copper ?? 0),
+        manganese: Number(f.manganese ?? 0),
+        selenium: Number(f.selenium ?? 0),
+        chromium: Number(f.chromium ?? 0),
+        iodine: Number(f.iodine ?? 0),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
 const styles = StyleSheet.create({
   doneBar: {
     flexDirection: 'row',
@@ -316,12 +370,26 @@ export default function AddFoodScreen() {
     }, 500);
   }, []);
 
-  const handleSelectFood = useCallback((food: Food) => {
+  const handleSelectFood = useCallback(async (food: Food) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Show it immediately so the screen feels instant
     setSelectedFood(food);
     setServings(1);
     setGramInput(String(food.servingSize));
     Keyboard.dismiss();
+
+    // Search results come back with all micronutrients = 0 (the /search route
+    // only returns macros to stay fast). If this food has no micros yet, fetch
+    // the full record so vitamins/minerals show up and count toward the score.
+    const hasMicros = Object.values(food.micros).some((v) => v > 0);
+    if (!hasMicros) {
+      const full = await fetchFoodById(food.id);
+      if (full) {
+        setSelectedFood((prev) => (prev && prev.id === full.id ? full : prev));
+        setGramInput(String(full.servingSize));
+      }
+    }
   }, []);
 
   const handleAddSavedMeal = useCallback((meal: SavedMeal) => {
