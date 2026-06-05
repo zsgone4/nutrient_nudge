@@ -49,45 +49,55 @@ model Food {
   servingUnit      String
   category         String         // 'fruits' | 'vegetables' | 'grains' | 'protein' | 'dairy' | 'fats' | 'snacks' | 'beverages' | 'prepared'
   image            String?
-  
-  // Macronutrients
+
+  // Where this food came from (used by the importer to dedupe and re-run safely)
+  source           String?        // 'usda' | 'openfoodfacts' | 'user'
+  sourceId         String?        // e.g. USDA fdcId or barcode
+
+  // Macronutrients — REQUIRED (almost always present)
   calories         Float
   protein          Float          // grams
   carbohydrates    Float          // grams
   fat              Float          // grams
-  fiber            Float          // grams
-  sugar            Float          // grams
-  
-  // Micronutrients (all in appropriate units as per nutrition.ts)
-  vitaminA         Float          // mcg RAE
-  vitaminB1        Float          // mg
-  vitaminB2        Float          // mg
-  vitaminB3        Float          // mg
-  vitaminB5        Float          // mg
-  vitaminB6        Float          // mg
-  vitaminB7        Float          // mcg
-  vitaminB9        Float          // mcg
-  vitaminB12       Float          // mcg
-  vitaminC         Float          // mg
-  vitaminD         Float          // mcg
-  vitaminE         Float          // mg
-  vitaminK         Float          // mcg
-  
-  calcium          Float          // mg
-  iron             Float          // mg
-  magnesium        Float          // mg
-  phosphorus       Float          // mg
-  potassium        Float          // mg
-  sodium           Float          // mg
-  zinc             Float          // mg
-  copper           Float          // mg
-  manganese        Float          // mg
-  selenium         Float          // mcg
-  chromium         Float          // mcg
-  iodine           Float          // mcg
-  
+
+  // Often missing on packaged foods — OPTIONAL (null = unknown, not zero)
+  fiber            Float?         // grams
+  sugar            Float?         // grams
+
+  // Micronutrients — OPTIONAL (null = unknown, not zero)
+  vitaminA         Float?         // mcg RAE
+  vitaminB1        Float?         // mg
+  vitaminB2        Float?         // mg
+  vitaminB3        Float?         // mg
+  vitaminB5        Float?         // mg
+  vitaminB6        Float?         // mg
+  vitaminB7        Float?         // mcg
+  vitaminB9        Float?         // mcg
+  vitaminB12       Float?         // mcg
+  vitaminC         Float?         // mg
+  vitaminD         Float?         // mcg
+  vitaminE         Float?         // mg
+  vitaminK         Float?         // mcg
+
+  calcium          Float?         // mg
+  iron             Float?         // mg
+  magnesium        Float?         // mg
+  phosphorus       Float?         // mg
+  potassium        Float?         // mg
+  sodium           Float?         // mg
+  zinc             Float?         // mg
+  copper           Float?         // mg
+  manganese        Float?         // mg
+  selenium         Float?         // mcg
+  chromium         Float?         // mcg
+  iodine           Float?         // mcg
+
   foodLogEntries   FoodLogEntry[]
   createdAt        DateTime       @default(now())
+
+  // Lets the seed script run more than once without creating duplicates.
+  // (Postgres allows multiple NULLs here, so user-added foods won't collide.)
+  @@unique([source, sourceId])
 }
 
 model FoodLogEntry {
