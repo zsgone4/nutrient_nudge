@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const foodsRouter = new Hono();
 
@@ -160,6 +162,51 @@ async function runUsdaSeed(apiKey: string) {
   console.log(`USDA seed finished. Imported ${total} foods.`);
 }
 
+/* --------------------------- CoFID (UK) seed --------------------------- */
+// Loads the committed cofid-foods.json. Tries several locations so it works
+// whether Render's working directory is the repo root or the backend folder.
+function loadCofidFile(): any[] {
+  const candidates = [
+    join(process.cwd(), "cofid-foods.json"),
+    join(process.cwd(), "backend", "cofid-foods.json"),
+    join(process.cwd(), "data", "cofid-foods.json"),
+    join(process.cwd(), "backend", "data", "cofid-foods.json"),
+    join(process.cwd(), "src", "data", "cofid-foods.json"),
+    join(process.cwd(), "backend", "src", "data", "cofid-foods.json"),
+  ];
+  for (const p of candidates) {
+    try {
+      const raw = readFileSync(p, "utf-8");
+      console.log(`CoFID seed: loaded ${p}`);
+      return JSON.parse(raw);
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error(`cofid-foods.json not found. Tried: ${candidates.join(", ")}`);
+}
+
+async function runCofidSeed() {
+  const all = loadCofidFile();
+  const existing = await db.food.findMany({
+    where: { source: "cofid" },
+    select: { sourceId: true },
+  });
+  const seen = new Set(existing.map((f) => f.sourceId));
+  const fresh = all.filter((f) => f.sourceId && !seen.has(f.sourceId));
+  console.log(`CoFID seed: ${all.length} in file, ${fresh.length} new to insert.`);
+
+  const CHUNK = 500; // keeps well under Postgres parameter limits
+  let total = 0;
+  for (let i = 0; i < fresh.length; i += CHUNK) {
+    const batch = fresh.slice(i, i + CHUNK);
+    await db.food.createMany({ data: batch, skipDuplicates: true });
+    total += batch.length;
+    console.log(`CoFID seed: +${batch.length} (total ${total}/${fresh.length})`);
+  }
+  console.log(`CoFID seed finished. Imported ${total} foods.`);
+}
+
 /* ------------------------------- routes ------------------------------- */
 
 // GET /api/foods - list with pagination
@@ -207,23 +254,30 @@ foodsRouter.get("/barcode/:barcode", async (c) => {
   return c.json({ food: toNumeric(food) });
 });
 
-// GET /api/foods/search - by name/brand, optional category
+// GET /api/foods/search - all query words must match (any order) in name or brand.
+// This makes "sea bass" match CoFID's inverted "Bass, sea, flesh only, raw".
 foodsRouter.get("/search", async (c) => {
-  const query = c.req.query("q") || "";
+  const query = (c.req.query("q") || "").trim();
   const category = c.req.query("category");
   if (!query && !category) {
     return c.json({ error: "Please provide a search query or category" }, 400);
   }
+
+  const words = query.split(/\s+/).filter(Boolean);
+
+  const where: any = {};
+  if (words.length) {
+    where.AND = words.map((w) => ({
+      OR: [
+        { name: { contains: w, mode: "insensitive" } },
+        { brand: { contains: w, mode: "insensitive" } },
+      ],
+    }));
+  }
+  if (category) where.category = category;
+
   const foods = await db.food.findMany({
-    where: {
-      ...(query && {
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { brand: { contains: query, mode: "insensitive" } },
-        ],
-      }),
-      ...(category && { category }),
-    },
+    where,
     take: 50,
     select: {
       id: true, name: true, brand: true, servingSize: true, servingUnit: true,
@@ -243,6 +297,17 @@ foodsRouter.get("/seed-usda", (c) => {
   const apiKey = process.env.FDC_API_KEY;
   if (!apiKey) return c.json({ error: "FDC_API_KEY not set" }, 500);
   runUsdaSeed(apiKey).catch((e) => console.error("USDA seed crashed:", e));
+  return c.json({ status: "started", note: "Watch Render logs for progress." });
+});
+
+// GET /api/foods/seed-cofid - ONE-TIME import of UK CoFID generic foods.
+// Reuses SEED_SECRET. MUST stay above "/:id".
+foodsRouter.get("/seed-cofid", (c) => {
+  const secret = c.req.query("secret");
+  if (!secret || secret !== process.env.SEED_SECRET) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  runCofidSeed().catch((e) => console.error("CoFID seed crashed:", e));
   return c.json({ status: "started", note: "Watch Render logs for progress." });
 });
 
