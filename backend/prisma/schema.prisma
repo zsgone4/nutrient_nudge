@@ -11,19 +11,22 @@ datasource db {
 }
 
 model Signup {
-  id               String         @id @default(cuid())
-  email            String         @unique
-  name             String
-  age              Int
-  gender           String
-  trainingGoal     String?
-  goals            String
-  agreedToPolicy   Boolean
-  createdAt        DateTime       @default(now())
-  userProfile      UserProfile?
-  foodLogEntries   FoodLogEntry[]
-  nutrientScores   NutrientScore[]
-  savedMeals       SavedMeal[]
+  id                 String         @id @default(cuid())
+  email              String         @unique
+  name               String
+  age                Int
+  gender             String
+  trainingGoal       String?
+  goals              String
+  agreedToPolicy     Boolean
+  emailVerified      Boolean        @default(false)
+  verificationToken  String?        @unique
+  verifiedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  userProfile        UserProfile?
+  foodLogEntries     FoodLogEntry[]
+  nutrientScores     NutrientScore[]
+  savedMeals         SavedMeal[]
 }
 
 model UserProfile {
