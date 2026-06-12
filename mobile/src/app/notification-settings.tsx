@@ -59,6 +59,7 @@ export default function NotificationSettingsScreen() {
   }, []);
 
   const persist = async (enabled: boolean, rems: ReminderConfig[]) => {
+    // saveNotificationSettings already (re)schedules with the OS
     await saveNotificationSettings({ enabled, reminders: rems });
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1800);
@@ -66,7 +67,14 @@ export default function NotificationSettingsScreen() {
 
   const toggleMaster = async (val: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (val) await requestNotificationPermissions();
+    if (val) {
+      const granted = await requestNotificationPermissions();
+      if (!granted) {
+        // Don't show reminders as "on" if the user denied permission
+        setMasterEnabled(false);
+        return;
+      }
+    }
     setMasterEnabled(val);
     persist(val, reminders);
   };
@@ -276,7 +284,7 @@ export default function NotificationSettingsScreen() {
           borderWidth: 1, borderColor: 'rgba(16,185,129,0.15)',
         }}>
           <Text style={{ fontSize: 13, color: C.textSecondary, lineHeight: 20 }}>
-            Reminders show as a banner when you open the app near your set times. Consistent logging leads to better nutrient insights and a higher score.
+            Reminders are delivered by your phone at the times you set — even when the app is closed. Consistent logging leads to better nutrient insights and a higher score.
           </Text>
         </View>
 
