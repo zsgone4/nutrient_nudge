@@ -8,17 +8,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, Bell, BellOff, Clock } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useUserStore } from '@/lib/state/user-store';
 import { useNutritionStore } from '@/lib/state/nutrition-store';
 import { log } from '@/lib/logger';
+import {
+  ReminderConfig,
+  DEFAULT_REMINDERS,
+  saveNotificationSettings,
+  requestNotificationPermissions,
+} from '@/lib/utils/notificationSettings';
 
 import { BACKEND_URL } from '@/lib/config';
 
@@ -78,7 +87,7 @@ const FITNESS_GOALS = [
   { id: 'aggressive_bulk', label: 'Aggressive Bulk', emoji: '🏋️', desc: 'Maximise muscle gains (+25%)', color: '#8B5CF6', adj: 0.25 },
 ];
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 
 const STEP_HEADINGS = [
   { title: 'Welcome to\nNutrient Nudge 🌿', sub: 'Tell us about yourself so we can personalise your experience.' },
@@ -89,6 +98,7 @@ const STEP_HEADINGS = [
   { title: 'Training focus 💪', sub: "Pick your main focus — we'll build your plan around it." },
   { title: 'Health goals', sub: "Select all that apply — we'll tailor your recommendations." },
   { title: 'Your calorie\ntarget 🔢', sub: "Based on your data, here's what we recommend." },
+  { title: 'Stay on track 🔔', sub: 'Set daily reminders to log your meals — you can change these anytime.' },
   { title: 'Almost there! 🎉', sub: 'Review your details before getting started.' },
 ];
 
@@ -140,7 +150,13 @@ export default function SignupScreen() {
   const [goals, setGoals] = useState<string[]>([]);
   // Step 7
   const [customCalories, setCustomCalories] = useState<number | null>(null);
-  // Step 8
+  // Step 8: meal reminders
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminders, setReminders] = useState<ReminderConfig[]>(DEFAULT_REMINDERS);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerKey, setPickerKey] = useState<string | null>(null);
+  const [pickerDate, setPickerDate] = useState(new Date());
+  // Step 9
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -180,7 +196,8 @@ export default function SignupScreen() {
       case 5: return trainingGoal !== '';
       case 6: return goals.length > 0;
       case 7: return true;
-      case 8: return agreedToPolicy;
+      case 8: return true; // reminders are optional
+      case 9: return agreedToPolicy;
       default: return false;
     }
   }, [step, name, email, age, gender, heightCm, weightKg, activityLevel, fitnessGoal, trainingGoal, goals, agreedToPolicy]);
@@ -230,6 +247,10 @@ export default function SignupScreen() {
         });
       }
 
+      // Save & schedule the user's chosen meal reminders (stored locally on device,
+      // not sent to the backend). This also requests notification permission.
+      saveNotificationSettings({ enabled: remindersEnabled, reminders }).catch(() => {});
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 150);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 320);
@@ -277,6 +298,56 @@ export default function SignupScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCustomCalories(prev => Math.max(800, Math.min(6000, (prev ?? recommendedCalories) + delta)));
   };
+
+  // ── Reminder step helpers ──
+  const formatTime = (hour: number, minute: number) => {
+    const h = hour % 12 || 12;
+    const m = minute.toString().padStart(2, '0');
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${h}:${m} ${ampm}`;
+  };
+
+  const toggleRemindersMaster = async (val: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (val) await requestNotificationPermissions();
+    setRemindersEnabled(val);
+  };
+
+  const toggleReminder = (key: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setReminders(prev => prev.map(r => r.key === key ? { ...r, enabled: !r.enabled } : r));
+  };
+
+  const openTimePicker = (key: string) => {
+    const r = reminders.find(rr => rr.key === key);
+    if (!r) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const d = new Date();
+    d.setHours(r.hour, r.minute, 0, 0);
+    setPickerDate(d);
+    setPickerKey(key);
+    setPickerOpen(true);
+  };
+
+  const handleTimeChange = (_: unknown, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setPickerOpen(false);
+      if (!date || !pickerKey) return;
+      setReminders(prev => prev.map(r =>
+        r.key === pickerKey ? { ...r, hour: date.getHours(), minute: date.getMinutes() } : r
+      ));
+      return;
+    }
+    if (!date) return;
+    setPickerDate(date);
+    if (pickerKey) {
+      setReminders(prev => prev.map(r =>
+        r.key === pickerKey ? { ...r, hour: date.getHours(), minute: date.getMinutes() } : r
+      ));
+    }
+  };
+
+  const confirmIOSTime = () => setPickerOpen(false);
 
   const heading = STEP_HEADINGS[step];
   const activityLabel = ACTIVITY_OPTIONS.find(a => a.id === activityLevel)?.label ?? '';
@@ -739,8 +810,91 @@ export default function SignupScreen() {
               </View>
             )}
 
-            {/* ── Step 8: Review & Policy ── */}
+            {/* ── Step 8: Meal Reminders ── */}
             {step === 8 && (
+              <View style={{ gap: 12 }}>
+                {/* Master toggle */}
+                <View style={[card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <View style={{
+                      width: 42, height: 42, borderRadius: 13,
+                      backgroundColor: remindersEnabled ? C.greenDim : C.surfaceAlt,
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {remindersEnabled
+                        ? <Bell size={19} color={C.green} />
+                        : <BellOff size={19} color={C.textMuted} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: C.textPrimary }}>Meal reminders</Text>
+                      <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>
+                        {remindersEnabled ? 'Get nudged to log each meal' : 'Reminders are off'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={remindersEnabled}
+                    onValueChange={toggleRemindersMaster}
+                    trackColor={{ false: '#333', true: C.green }}
+                    thumbColor="white"
+                  />
+                </View>
+
+                {/* Per-meal cards */}
+                {reminders.map(r => {
+                  const isActive = remindersEnabled && r.enabled;
+                  return (
+                    <View
+                      key={r.key}
+                      style={{
+                        backgroundColor: C.surface, borderRadius: 16,
+                        borderWidth: 1, borderColor: isActive ? C.greenDimBorder : C.border,
+                        overflow: 'hidden', opacity: remindersEnabled ? 1 : 0.45,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                        <Text style={{ fontSize: 24, marginRight: 12 }}>{r.emoji}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: C.textPrimary }}>{r.label}</Text>
+                          <Text style={{ fontSize: 12, color: C.textSecondary, marginTop: 2 }}>{r.description}</Text>
+                        </View>
+                        <Switch
+                          value={r.enabled}
+                          onValueChange={() => toggleReminder(r.key)}
+                          trackColor={{ false: '#333', true: C.green }}
+                          thumbColor="white"
+                          disabled={!remindersEnabled}
+                        />
+                      </View>
+                      <Pressable
+                        onPress={() => isActive ? openTimePicker(r.key) : undefined}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                          paddingHorizontal: 16, paddingVertical: 13,
+                          borderTopWidth: 1, borderTopColor: C.border,
+                          backgroundColor: isActive ? 'rgba(16,185,129,0.06)' : 'transparent',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Clock size={14} color={isActive ? C.green : C.textMuted} />
+                          <Text style={{ fontSize: 13, color: C.textSecondary, fontWeight: '600' }}>Time</Text>
+                        </View>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: isActive ? C.green : C.textMuted }}>
+                          {formatTime(r.hour, r.minute)}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+
+                <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', lineHeight: 18, marginTop: 4 }}>
+                  You can change or turn these off anytime in Settings.
+                </Text>
+              </View>
+            )}
+
+            {/* ── Step 9: Review & Policy ── */}
+            {step === 9 && (
               <View style={{ gap: 14 }}>
                 <View style={card}>
                   <Text style={[fieldLabel, { marginBottom: 16 }]}>Your details</Text>
@@ -845,6 +999,48 @@ export default function SignupScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* ── iOS time picker sheet ── */}
+      {Platform.OS === 'ios' && (
+        <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' }}>
+            <View style={{
+              backgroundColor: C.surface,
+              borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              padding: 20, paddingBottom: insets.bottom + 24,
+              borderTopWidth: 1, borderColor: C.border,
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}>
+                  <Text style={{ color: C.textSecondary, fontSize: 16, fontWeight: '600' }}>Cancel</Text>
+                </Pressable>
+                <Text style={{ color: C.textPrimary, fontSize: 16, fontWeight: '700' }}>Set Time</Text>
+                <Pressable onPress={confirmIOSTime} hitSlop={10}>
+                  <Text style={{ color: C.green, fontSize: 16, fontWeight: '700' }}>Done</Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={pickerDate}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                textColor="white"
+                style={{ height: 160 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ── Android time picker ── */}
+      {Platform.OS === 'android' && pickerOpen && (
+        <DateTimePicker
+          value={pickerDate}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
     </View>
   );
 }
