@@ -278,61 +278,6 @@ export default function SignupScreen() {
     },
   });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error((json as { error?: string }).error ?? 'Something went wrong');
-      return json as { success: boolean; user: { id: string; email: string; name: string } };
-    },
-    onSuccess: (data) => {
-      // Save body profile to nutrition store
-      setUserProfile({
-        age: Number(age),
-        heightCm: Number(heightCm),
-        weightKg: Number(weightKg),
-        sex: sexForCalc,
-        activityLevel: activityLevel as 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active',
-        goal: fitnessGoal as 'aggressive_cut' | 'conservative_cut' | 'maintain' | 'conservative_bulk' | 'aggressive_bulk',
-        isSetup: true,
-      });
-
-      // If user amended calories, apply custom macro goals
-      if (customCalories !== null && customCalories !== recommendedCalories) {
-        const wKg = Number(weightKg) || 70;
-        const { protein, fat, carbs } = calcMacros(customCalories, wKg);
-        setCustomMacroGoals({
-          calories: customCalories,
-          protein,
-          carbohydrates: carbs,
-          fat,
-          fiber: Math.round((customCalories / 1000) * 14),
-          sugar: Math.round((customCalories * 0.08) / 4),
-        });
-      }
-
-      // Save & schedule the user's chosen meal reminders (stored locally on device,
-      // not sent to the backend). This also requests notification permission.
-      saveNotificationSettings({ enabled: remindersEnabled, reminders }).catch(() => {});
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 150);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 320);
-      setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 500);
-      setTimeout(() => {
-        setSignedUp(data.user.id, data.user.email, {
-          userName: name.trim(),
-          userAge: age,
-          userGender: gender,
-          userTrainingGoal: trainingGoal,
-          userGoals: goals,
-        });
-        router.replace('/(tabs)');
-      }, 600);
-    },
-    onError: (err: Error) => {
-      log.error("signup.failed", { err, email: email.trim().toLowerCase() });
-      setErrorMsg(err.message);
-    },
-  });
-
   const handleNext = () => {
     if (!isStepValid) return;
     setErrorMsg('');
