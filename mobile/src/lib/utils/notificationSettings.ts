@@ -111,3 +111,12 @@ export async function saveNotificationSettings(settings: NotificationSettings): 
   await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
   await scheduleAllNotifications(settings);
 }
+
+// Call once on app launch so reminders are scheduled even if the user
+// never opens the settings screen. This fixes the "defaults are on but
+// nothing is scheduled" gap.
+export async function initNotifications(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const settings = await loadNotificationSettings();
+  await scheduleAllNotifications(settings);
+}
