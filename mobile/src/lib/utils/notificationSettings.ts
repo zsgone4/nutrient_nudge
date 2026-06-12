@@ -53,6 +53,54 @@ function pickMessage(key: string): string {
   return msgs[Math.floor(Math.random() * msgs.length)];
 }
 
+// ---- Engagement nudges (habit-building, beyond meal logging) ----
+// frequency 'daily'  -> fires once a day at hour:minute (weekdays ignored)
+// frequency 'weekly' -> fires on each listed weekday at hour:minute
+// Weekday numbering: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+// To add a new nudge, just append an object to this array.
+export type EngagementConfig = {
+  key: string;
+  frequency: 'daily' | 'weekly';
+  weekdays?: number[]; // required when frequency === 'weekly'
+  hour: number;
+  minute: number;
+  enabled: boolean;
+  title: string;
+  body: string;
+};
+
+export const ENGAGEMENT_NOTIFICATIONS: EngagementConfig[] = [
+  {
+    key: 'score-share',
+    frequency: 'weekly',
+    weekdays: [2, 4, 6], // Mon, Wed, Fri
+    hour: 18,
+    minute: 30,
+    enabled: true,
+    title: "📊 How's your nutrient score?",
+    body: "Check today's score and share your progress with a friend!",
+  },
+  {
+    key: 'feel-difference',
+    frequency: 'daily',
+    hour: 19,
+    minute: 30,
+    enabled: true,
+    title: "✨ Feel the Difference",
+    body: "See how today's food is powering your sleep, skin, recovery & energy.",
+  },
+  {
+    key: 'weekly-recap',
+    frequency: 'weekly',
+    weekdays: [1], // Sunday
+    hour: 19,
+    minute: 0,
+    enabled: true,
+    title: "📈 Your 7-day nutrient score",
+    body: "Check this week's consistency and set yourself up for next week!",
+  },
+];
+
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -64,7 +112,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 export async function scheduleAllNotifications(settings: NotificationSettings): Promise<void> {
   if (Platform.OS === 'web') return;
 
-  // Cancel all existing scheduled notifications first
+  // Cancel everything first, then rebuild the full schedule
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   if (!settings.enabled) return;
@@ -72,6 +120,7 @@ export async function scheduleAllNotifications(settings: NotificationSettings): 
   const hasPermission = await requestNotificationPermissions();
   if (!hasPermission) return;
 
+  // 1) Daily meal reminders
   for (const reminder of settings.reminders) {
     if (!reminder.enabled) continue;
 
@@ -87,6 +136,34 @@ export async function scheduleAllNotifications(settings: NotificationSettings): 
         minute: reminder.minute,
       },
     });
+  }
+
+  // 2) Engagement nudges (daily or weekly)
+  for (const item of ENGAGEMENT_NOTIFICATIONS) {
+    if (!item.enabled) continue;
+
+    if (item.frequency === 'daily') {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: item.title, body: item.body, sound: true },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: item.hour,
+          minute: item.minute,
+        },
+      });
+    } else {
+      for (const weekday of item.weekdays ?? []) {
+        await Notifications.scheduleNotificationAsync({
+          content: { title: item.title, body: item.body, sound: true },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday,
+            hour: item.hour,
+            minute: item.minute,
+          },
+        });
+      }
+    }
   }
 }
 
@@ -109,14 +186,5 @@ export async function loadNotificationSettings(): Promise<NotificationSettings> 
 
 export async function saveNotificationSettings(settings: NotificationSettings): Promise<void> {
   await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
-  await scheduleAllNotifications(settings);
-}
-
-// Call once on app launch so reminders are scheduled even if the user
-// never opens the settings screen. This fixes the "defaults are on but
-// nothing is scheduled" gap.
-export async function initNotifications(): Promise<void> {
-  if (Platform.OS === 'web') return;
-  const settings = await loadNotificationSettings();
   await scheduleAllNotifications(settings);
 }
