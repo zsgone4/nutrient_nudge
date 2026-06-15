@@ -10,6 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MicroStatus {
+  MEASURED // real composition data (CoFID / USDA), or rich enough on its own
+  PROXY    // micronutrients borrowed from a similar MEASURED food
+  NONE     // no data and no safe proxy → hidden / blocked
+}
+
 model Signup {
   id                 String         @id @default(cuid())
   email              String         @unique
@@ -54,7 +60,7 @@ model Food {
   image            String?
 
   // Where this food came from (used by the importer to dedupe and re-run safely)
-  source           String?        // 'usda' | 'openfoodfacts' | 'user'
+  source           String?        // 'usda' | 'cofid' | 'openfoodfacts' | 'user'
   sourceId         String?        // e.g. USDA fdcId or barcode
 
   // Macronutrients — REQUIRED (almost always present)
@@ -95,12 +101,25 @@ model Food {
   chromium         Float?         // mcg
   iodine           Float?         // mcg
 
+  // --- Micronutrient profile resolution -------------------------------
+  // Every usable food ends up MEASURED or PROXY. NONE = no data and no safe
+  // match → hidden from search and blocked from logging.
+  // Defaults to MEASURED so a deploy never hides the DB before the backfill runs.
+  microStatus      MicroStatus    @default(MEASURED)
+  microProxyFoodId String?        // donor food this profile was borrowed from
+  microProxyFood   Food?          @relation("MicroProxy", fields: [microProxyFoodId], references: [id])
+  proxiedFoods     Food[]         @relation("MicroProxy")
+  microMatchName   String?        // donor name, for the "Estimated from …" label
+  microMatchScore  Float?         // 0..1 match confidence when PROXY
+
   foodLogEntries   FoodLogEntry[]
   createdAt        DateTime       @default(now())
 
   // Lets the seed script run more than once without creating duplicates.
   // (Postgres allows multiple NULLs here, so user-added foods won't collide.)
   @@unique([source, sourceId])
+  @@index([microStatus])
+  @@index([category])
 }
 
 model FoodLogEntry {
