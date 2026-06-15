@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { db } from "../db";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { resolveFoodMicros, backfillMicros } from "../lib/micronutrient-matching";
 
 const foodsRouter = new Hono();
 
@@ -209,19 +210,22 @@ async function runCofidSeed() {
 
 /* ------------------------------- routes ------------------------------- */
 
-// GET /api/foods - list with pagination
+// GET /api/foods - list with pagination. Hides foods with no usable micro profile.
 foodsRouter.get("/", async (c) => {
   const skip = Number(c.req.query("skip")) || 0;
   const take = Math.min(Number(c.req.query("take")) || 50, 100);
+  const where = { microStatus: { not: "NONE" as const } };
   const foods = await db.food.findMany({
+    where,
     skip, take,
     select: {
       id: true, name: true, brand: true, servingSize: true, servingUnit: true,
       category: true, image: true, calories: true, protein: true,
       carbohydrates: true, fat: true, fiber: true,
+      microStatus: true, microMatchName: true,
     },
   });
-  const total = await db.food.count();
+  const total = await db.food.count({ where });
   return c.json({ foods, pagination: { skip, take, total } });
 });
 
@@ -244,11 +248,15 @@ foodsRouter.get("/barcode/:barcode", async (c) => {
     if (off.status !== 1 || !off.product) {
       return c.json({ error: "Food not found" }, 404);
     }
-    food = await db.food.upsert({
+    const created = await db.food.upsert({
       where: { barcode },
       update: {},
       create: mapOffToFood(off.product, barcode),
     });
+    // Attach a micronutrient profile: real if rich enough, otherwise borrowed
+    // from a similar measured food in the same category.
+    await resolveFoodMicros(created.id);
+    food = (await db.food.findUnique({ where: { id: created.id } })) ?? created;
   }
 
   return c.json({ food: toNumeric(food) });
@@ -265,7 +273,7 @@ foodsRouter.get("/search", async (c) => {
 
   const words = query.split(/\s+/).filter(Boolean);
 
-  const where: any = {};
+  const where: any = { microStatus: { not: "NONE" } };
   if (words.length) {
     where.AND = words.map((w) => ({
       OR: [
@@ -283,6 +291,7 @@ foodsRouter.get("/search", async (c) => {
       id: true, name: true, brand: true, servingSize: true, servingUnit: true,
       category: true, image: true, calories: true, protein: true,
       carbohydrates: true, fat: true, fiber: true,
+      microStatus: true, microMatchName: true,
     },
   });
   return c.json({ foods });
@@ -309,6 +318,39 @@ foodsRouter.get("/seed-cofid", (c) => {
   }
   runCofidSeed().catch((e) => console.error("CoFID seed crashed:", e));
   return c.json({ status: "started", note: "Watch Render logs for progress." });
+});
+
+// GET /api/foods/seed-micros - ONE-TIME classify + proxy backfill. MUST stay above "/:id".
+// Idempotent and safe to re-run. Call it, and if the response shows done:false,
+// call again with ?secret=…&after=<lastId> until done:true.
+foodsRouter.get("/seed-micros", async (c) => {
+  const secret = c.req.query("secret");
+  if (!secret || secret !== process.env.SEED_SECRET) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  let after = c.req.query("after") || null;
+  const totals = { processed: 0, measured: 0, proxy: 0, none: 0 };
+  const started = Date.now();
+  let done = false;
+
+  // Loop batches within a time budget so one page load does as much as possible.
+  while (Date.now() - started < 20000) {
+    const r = await backfillMicros(after, 300);
+    totals.processed += r.processed;
+    totals.measured += r.measured;
+    totals.proxy += r.proxy;
+    totals.none += r.none;
+    after = r.lastId;
+    if (r.done) { done = true; break; }
+  }
+
+  return c.json({
+    done,
+    lastId: after,
+    totals,
+    next: done ? null : `Call again with ?secret=…&after=${after}`,
+  });
 });
 
 // GET /api/foods/:id - single food (keep AFTER the specific routes above)
@@ -363,15 +405,19 @@ const foodSchema = z.object({
 
 foodsRouter.post("/", zValidator("json", foodSchema), async (c) => {
   const data = c.req.valid("json");
+  let food;
   if (data.barcode) {
-    const food = await db.food.upsert({
+    food = await db.food.upsert({
       where: { barcode: data.barcode },
       create: data,
       update: {},
     });
-    return c.json({ success: true, food }, 201);
+  } else {
+    food = await db.food.create({ data });
   }
-  const food = await db.food.create({ data });
+  // Classify + (if needed) attach a borrowed micro profile before returning.
+  await resolveFoodMicros(food.id);
+  food = (await db.food.findUnique({ where: { id: food.id } })) ?? food;
   return c.json({ success: true, food }, 201);
 });
 
