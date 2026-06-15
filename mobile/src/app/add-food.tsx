@@ -118,6 +118,8 @@ async function fetchFoodByBarcodeFromBackend(barcode: string): Promise<Food | nu
       servingSize: Number(f.servingSize),
       servingUnit: f.servingUnit,
       category: f.category,
+      microStatus: f.microStatus,
+      microMatchName: f.microMatchName ?? null,
       macros: {
         calories: Number(f.calories),
         protein: Number(f.protein),
@@ -206,6 +208,8 @@ async function searchFoodsAPI(query: string): Promise<Food[]> {
       servingSize: Number(f.servingSize),
       servingUnit: f.servingUnit,
       category: f.category,
+      microStatus: f.microStatus,
+      microMatchName: f.microMatchName ?? null,
       macros: {
         calories: Number(f.calories),
         protein: Number(f.protein),
@@ -241,6 +245,8 @@ async function fetchFoodById(id: string): Promise<Food | null> {
       servingSize: Number(f.servingSize),
       servingUnit: f.servingUnit,
       category: f.category,
+      microStatus: f.microStatus,
+      microMatchName: f.microMatchName ?? null,
       macros: {
         calories: Number(f.calories),
         protein: Number(f.protein),
@@ -549,6 +555,16 @@ export default function AddFoodScreen() {
                 </Text>
               </View>
             </View>
+            {selectedFood.microStatus === 'PROXY' && (
+              <View className="mt-1 mb-1 flex-row">
+                <View className="bg-amber-50 dark:bg-amber-900/25 border border-amber-200 dark:border-amber-700 rounded-lg px-2.5 py-1.5 flex-row items-center flex-1">
+                  <AlertCircle size={13} color="#D97706" />
+                  <Text className="text-xs text-amber-700 dark:text-amber-300 ml-1.5 flex-1">
+                    Estimated micronutrients{selectedFood.microMatchName ? ` · based on ${selectedFood.microMatchName}` : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
             {highMicros.length > 0 && (
               <View className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                 <View className="flex-row items-center mb-2">
