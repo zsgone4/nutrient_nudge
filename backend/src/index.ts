@@ -76,6 +76,7 @@ app.route("/api/account", deleteAccountRouter);
 app.route("/api/profile", updateProfileRouter);
 app.route("/api/foods", foodsRouter);
 app.route("/api/food-logs", foodLogsRouter);
+app.route("/api/meals", foodLogsRouter); // Alias for save meal requests
 app.route("/api/user-profile", userProfileRouter);
 app.route("/api/goals", goalsRouter);
 app.route("/api/nutrient-score", nutrientScoreRouter);
